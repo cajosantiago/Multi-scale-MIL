@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	git clone https://github.com/cajosantiago/Multi-scale-MIL.git /home && \
     cd /home && \
     pip install -r docker/requirements.txt && \
-    wget -P checkpoints 'https://huggingface.co/shawn24/Mammo-CLIP/resolve/main/Pre-trained-checkpoints/b2-model-best-epoch-10.tar?download=true' -O 'b2-model-best-epoch-10.tar' \
+    wget -P checkpoints 'https://huggingface.co/shawn24/Mammo-CLIP/resolve/main/Pre-trained-checkpoints/b2-model-best-epoch-10.tar?download=true' -O 'b2-model-best-epoch-10.tar' && \
     gdown 'https://drive.google.com/uc?id=1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI'
 
 WORKDIR /home
