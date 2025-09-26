@@ -25,7 +25,7 @@ def config():
     parser.add_argument('--output_dir', metavar='DIR', default='Mammo-CLIP-output/out_splits_new',
                         help='path to output logs')
     parser.add_argument("--data_dir", default="datasets/Vindir-mammoclip", type=str, help="Path to data file")
-    parser.add_argument("--clip_chk_pt_path", default=None, type=str, help="Path to Mammo-CLIP chkpt")
+    parser.add_argument("--clip_chk_pt_path", default='checkpoints/b2-model-best-epoch-10.tar', type=str, help="Path to Mammo-CLIP chkpt")
     parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
     parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
     parser.add_argument("--img_dir", default="test_image.png", type=str,
@@ -446,6 +446,7 @@ def main(args):
 
     # Build model and load model checkpoint
     if args.clip_chk_pt_path is None or not os.path.exists(args.clip_chk_pt_path):
+        print('\nMammoCLIP checkpoint not found')
         model_config = 'b2-model-best-epoch-10'
         url = f"https://huggingface.co/shawn24/Mammo-CLIP/blob/main/Pre-trained-checkpoints/{model_config}.tar?download=true"
         output_dir = "./checkpoints/"
