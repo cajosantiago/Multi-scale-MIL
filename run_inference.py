@@ -447,7 +447,7 @@ def main(args):
     # Build model and load model checkpoint
     if args.clip_chk_pt_path is None or not os.path.exists(args.clip_chk_pt_path):
         model_config = 'b2-model-best-epoch-10'
-        url = f"https://huggingface.co/shawn24/Mammo-CLIP/blob/main/Pre-trained-checkpoints/{model_config}.tar"
+        url = f"https://huggingface.co/shawn24/Mammo-CLIP/blob/main/Pre-trained-checkpoints/{model_config}.tar?download=true"
         output_dir = "./checkpoints/"
         filename = os.path.join(output_dir, f"{model_config}.tar")
         # Ensure the checkpoints directory exists
