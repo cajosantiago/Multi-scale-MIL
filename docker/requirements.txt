@@ -1,0 +1,7 @@
+pandas
+timm
+transformers
+entmax
+scikit-learn
+gdown
+omegaconf
