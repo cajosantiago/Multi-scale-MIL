@@ -28,7 +28,7 @@ def config():
     parser.add_argument("--clip_chk_pt_path", default=None, type=str, help="Path to Mammo-CLIP chkpt")
     parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
     parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
-    parser.add_argument("--img_dir", default="VinDir_preprocessed_mammoclip/images_png", type=str,
+    parser.add_argument("--img_dir", default="test_image.png", type=str,
                         help="Path to image file")
 
     parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
@@ -483,7 +483,7 @@ def main(args):
     model.to(device)
 
     # Load and preprocess image
-    img = Image.open('test_image.png').convert('RGB')
+    img = Image.open(args.img_dir).convert('RGB')
     tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                           torchvision.transforms.Normalize(mean=args.mean, std=args.std),
                                           lambda_funct(pad_image, args.patch_size, args.mean, args.std),
