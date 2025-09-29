@@ -19,4 +19,3 @@ sudo systemctl restart docker
 cd Multi-scale-Attention-based-MIL
 sudo docker build -t mmourao/mmourao:latest ./docker/
 sudo docker run --rm --name mariana -it --gpus all mmourao/mmourao python run_inference.py
-sudo docker run --rm --name mariana -it --gpus all mmourao/mmourao bash
