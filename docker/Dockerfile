@@ -1,5 +1,6 @@
 #FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
-FROM pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime
+#FROM pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.8.0-cuda12.9-cudnn9-runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 	git wget && \

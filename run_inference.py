@@ -477,7 +477,7 @@ def main(args):
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
         gdown.download('https://drive.google.com/file/d/1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI/view?usp=sharing', checkpoint_path)
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model.load_state_dict(checkpoint['model'], strict=False)
     model.is_training = False  # Set model mode for evaluation
     model.eval()
