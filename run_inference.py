@@ -498,7 +498,7 @@ def main(args):
     x, bag_coords, padding = tfm(img)
 
     # Process image
-    logits = model(x.unsqueeze(0))
+    logits = model(x.unsqueeze(0).to(device))
     print('logits:', logits)
 
 
