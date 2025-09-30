@@ -525,10 +525,9 @@ def run_classifier(image):
 
         # Process image
         model.to(device)
-        logits = model(x.unsqueeze(0).to(device)).cpu().detach().numpy()
-    print('logits:', logits)
-
-    return logits
+        prob = torch.sigmoid(model(x.unsqueeze(0).to(device))).cpu().detach().squeeze().numpy()
+    print('prob:', prob)
+    return {"no_calcification": 1-prob, "has_calcification": prob}
 
 
 
