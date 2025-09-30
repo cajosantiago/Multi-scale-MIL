@@ -473,6 +473,7 @@ def main(args):
         print('model saved')
         args.clip_chk_pt_path = filename
 
+    global model
     model = build_model(args)
     print('model loaded')
     checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_calcifications.pth')
@@ -483,7 +484,6 @@ def main(args):
     model.load_state_dict(checkpoint['model'], strict=False)
     model.is_training = False  # Set model mode for evaluation
     model.eval()
-    global model
 
     ## Launch gradio demo
     # Build Gradio interface
