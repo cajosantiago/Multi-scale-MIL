@@ -417,6 +417,7 @@ def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
 
     # Set device
+    global device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('\nUsing device:', device)
 
