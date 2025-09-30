@@ -483,6 +483,7 @@ def main(args):
     model.load_state_dict(checkpoint['model'], strict=False)
     model.is_training = False  # Set model mode for evaluation
     model.eval()
+    global model
 
     ## Launch gradio demo
     # Build Gradio interface
@@ -496,16 +497,16 @@ def main(args):
             classify_button = gr.Button("Run Classifier")
             output_label = gr.Label(label="Result")
 
-        # # Store the model in state
-        # model_state = gr.State(model)
+        # Store the model in state
+        model_state = gr.State(model)
 
-        classify_button.click(fn=run_classifier, inputs=[image_input, model], outputs=output_label)
+        classify_button.click(fn=run_classifier, inputs=[image_input, model_state], outputs=output_label)
 
     demo.launch()
 
 
 # This function is called when the button is pressed
-def run_classifier(image, model):
+def run_classifier(image):
     if image is None:
         return "No image uploaded"
 
