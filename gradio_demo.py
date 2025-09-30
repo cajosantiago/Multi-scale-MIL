@@ -504,7 +504,6 @@ def main(args):
     demo.launch()
 
 
-
 # This function is called when the button is pressed
 def run_classifier(image, model):
     if image is None:
