@@ -497,10 +497,7 @@ def main(args):
             classify_button = gr.Button("Run Classifier")
             output_label = gr.Label(label="Result")
 
-        # Store the model in state
-        model_state = gr.State(model)
-
-        classify_button.click(fn=run_classifier, inputs=[image_input, model_state], outputs=output_label)
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=output_label)
 
     demo.launch()
 
