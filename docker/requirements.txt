@@ -5,3 +5,4 @@ entmax
 scikit-learn
 gdown
 omegaconf
+gradio
