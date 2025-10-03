@@ -413,6 +413,102 @@ class lambda_funct(torchvision.transforms.Lambda):
     def __call__(self, img):
         return self.lambd(img, self.patch_size, self.mean, self.std)
 
+def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bboxes=3, min_area=230,
+                                        iou_threshold=0.5):
+    """
+    Extract bounding boxes from a heatmap by thresholding high-attention regions on a given heatmap.
+
+    Args:
+        heatmap (np.ndarray): 2D heatmap.
+        quantile_threshold (float): Quantile threshold for heatmap binarization (default: 0.98).
+        max_bboxes (int): Maximum number of bounding boxes to return after NMS (default: 3).
+        min_area (int): Minimum area (in pixels) for a connected component to be considered (default: 230).
+        iou_threshold (float, optional): IoU threshold used during NMS and overlap filtering (default: 0.5).
+
+    Returns:
+        list: List of bounding boxes with scores, in the format [x_min, y_min, x_max, y_max, score].
+    """
+
+    # Threshold heatmap based on quantile and minimum value
+    q = np.quantile(heatmap, quantile_threshold)
+    mask = (heatmap > q) & (heatmap > 0.5)
+
+    # label connected pixels in the binary mask
+    label_im, nb_labels = ndimage.label(mask)
+
+    # find the sizes of connected pixels
+    sizes = ndimage.sum(mask, label_im, range(nb_labels + 1))
+
+    # Remove connected components smaller than min_area
+    mask_size = sizes < min_area
+    remove_pixel = mask_size[label_im]
+    label_im[remove_pixel] = 0
+
+    # Re-label after removing small components
+    labels = np.unique(label_im)
+    label_im = np.searchsorted(labels, label_im)  # sort objects from large to small
+
+    # generate bounding boxes
+    bboxes = []
+    for l in range(1, len(labels)):
+        slice_x, slice_y = ndimage.find_objects(label_im == l)[0]
+
+        # Validate bounding box dimensions
+        if (slice_x.start < slice_x.stop) & (slice_y.start < slice_y.stop):
+
+            if (slice_x.stop - slice_x.start) * (slice_y.stop - slice_y.start) < min_area:
+                continue
+
+            b = [slice_y.start, slice_x.start, slice_y.stop, slice_x.stop]
+            score = get_cumlative_attention(heatmap, b)
+
+            bboxes.append([slice_y.start, slice_x.start, slice_y.stop, slice_x.stop, score])
+
+    # Sort boxes by score descending
+    bboxes = sorted(bboxes, key=lambda x: x[4], reverse=True)
+
+    # Convert to tensor for NMS if there are any detections
+    if len(bboxes) > 0:
+        bboxes_tensor = torch.tensor(bboxes, dtype=torch.float32)
+
+        # Apply Non-Maximum Suppression to reduce overlapping boxes
+        keep_indices = nms(bboxes_tensor[:, :4], bboxes_tensor[:, 4], iou_threshold)
+        keep_indices = keep_indices[:max_bboxes]
+        bboxes = bboxes_tensor[keep_indices]
+
+        # remove boxes contain within others
+        to_keep = []
+        for i in range(len(bboxes)):
+            keep = True
+            for j in range(len(bboxes)):
+                if i != j:
+                    box1 = bboxes[i, :4]
+                    box2 = bboxes[j, :4]
+
+                    # Compute intersection
+                    x1 = max(box1[0], box2[0])
+                    y1 = max(box1[1], box2[1])
+                    x2 = min(box1[2], box2[2])
+                    y2 = min(box1[3], box2[3])
+
+                    intersection = max(0, x2 - x1) * max(0, y2 - y1)
+
+                    # Compute areas
+                    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+                    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+
+                    # Check if intersection equals the area of the smaller box
+                    if intersection >= area1 * iou_threshold:
+                        keep = False
+                        break
+            if keep:
+                to_keep.append(bboxes[i])
+
+        # Convert back to list
+        bboxes = torch.stack(to_keep).tolist() if to_keep else []
+
+    return bboxes
+
 def visualize_detection(args, model, img):
     img_h, img_w = img.shape[:2]
 
@@ -458,8 +554,6 @@ def visualize_detection(args, model, img):
             # Initialize empty tensors for accumulating attention values and counts
         attention_map = torch.zeros(img_h, img_w)
         attention_map_counts = torch.zeros(img_h, img_w)
-
-        flag = 0
 
         # Loop over each patch coordinate for the current scale
         for patch_idx in range(len(bag_coords_scale)):
@@ -661,11 +755,7 @@ def run_classifier(image):
         bag_prob = torch.sigmoid(output)
 
         # Visualize detected lesions
-        # img_h = bag_info['img_height']
-        # img_w = bag_info['img_width']
-        img_h, img_w = image.shape[:2]
-
-        vis = visualize_detection(args, model, img)
+        vis = visualize_detection(args, model, image)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
