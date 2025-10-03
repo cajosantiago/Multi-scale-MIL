@@ -413,6 +413,139 @@ class lambda_funct(torchvision.transforms.Lambda):
     def __call__(self, img):
         return self.lambd(img, self.patch_size, self.mean, self.std)
 
+def visualize_detection(args, model, img):
+    img_h, img_w = img.shape[:2]
+
+    # Get instance-level attention scores for all scales from the model
+    scale_attentions_dict = model.get_patch_scores()
+
+    # If scale aggregator uses concatenation or gated-attention, also get scale scores
+    if args.type_scale_aggregator in ['concatenation', 'gated-attention']:
+        scale_scores = model.get_scale_scores().detach().cpu()
+
+    # Initialize multi-scale aggregated heatmap
+    aggregated_heatmap = torch.zeros(img_h, img_w)
+
+    # Dictionary to store heatmaps and bounding boxes per scale
+    heatmaps = {}
+
+    # Loop over each scale and its corresponding attention scores
+    for idx, (scale, attention_scores) in enumerate(scale_attentions_dict.items()):
+
+        # Get scale-level weight depending on aggregator type
+        if args.type_scale_aggregator == 'gated-attention':
+            scale_score = scale_scores[0, idx]
+
+        elif args.type_scale_aggregator == 'concatenation':
+            scale_score = scale_scores.squeeze()[idx]
+
+        attention_scores = attention_scores.detach().cpu().squeeze()
+
+        # Handle coordinate and patch size depending on multi-scale model type
+        if args.multi_scale_model == 'msp':
+            bag_coords_scale = bag_coords[scale] if scale != 'aggregated' else bag_coords[args.scales[0]]
+            patch_size = bag_info[scale]['patch_size'] if scale != 'aggregated' else args.scales[0]
+
+        elif args.multi_scale_model in ['fpn', 'backbone_pyramid']:
+            bag_coords_scale = bag_coords
+            patch_size = bag_info['patch_size']
+
+            # Calculate ratio for reshaping pixel-level attention scores spatially
+            ratio = patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0]
+            attention_scores = attention_scores.reshape(len(bag_coords_scale), math.ceil(ratio),
+                                                        math.ceil(ratio))
+
+            # Initialize empty tensors for accumulating attention values and counts
+        attention_map = torch.zeros(img_h, img_w)
+        attention_map_counts = torch.zeros(img_h, img_w)
+
+        flag = 0
+
+        # Loop over each patch coordinate for the current scale
+        for patch_idx in range(len(bag_coords_scale)):
+
+            # Get x,y coordinates of the patch (top-left corner)
+            x, y = bag_coords_scale[patch_idx, :]
+            x = x.item();
+            y = y.item()
+
+            x_start = max(0, x)
+            x_end = min(img_w, x + patch_size)
+            y_start = max(0, y)
+            y_end = min(img_h, y + patch_size)
+
+            if args.multi_scale_model in ['fpn', 'backbone_pyramid']:
+
+                # Upsample the spatial attention patch map to full patch size
+                patch_map = F.interpolate(attention_scores[patch_idx].unsqueeze(0).unsqueeze(0),
+                                          size=(patch_size, patch_size), mode='bilinear',
+                                          align_corners=True).detach().cpu().squeeze()
+
+                # Normalize patch_map to [0,1]
+                patch_map = (patch_map - patch_map.min()) / (
+                            patch_map.max() - patch_map.min() + torch.finfo(torch.float16).eps)
+
+                # Add normalized patch attention to the aggregated attention map for this scale
+                attention_map[y_start:y_end, x_start:x_end] += patch_map
+
+            elif args.multi_scale_model == 'msp':
+                # Directly add scalar patch-level attention score for this patch to the attention map region
+                attention_map[y_start:y_end, x_start:x_end] += attention_scores[patch_idx]
+
+            attention_map_counts[y_start:y_end, x_start:x_end] += 1
+
+        # Compute average attention per pixel
+        heatmap = torch.where(attention_map_counts == 0, torch.tensor(0.0),
+                              torch.div(attention_map, attention_map_counts))
+
+        # Apply Gaussian smoothing
+        heatmap = torch.from_numpy(gaussian_filter(heatmap, sigma=10))
+
+        # Normalize heatmap values only inside the segmentation mask, zero outside
+        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+                              (heatmap - heatmap[seg_mask != 0].min()) / (
+                                          heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
+                              torch.tensor(0.0))
+
+        # Extract bounding boxes from heatmap
+        predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap,
+                                                               quantile_threshold=args.quantile_threshold,
+                                                               max_bboxes=args.max_bboxes,
+                                                               min_area=args.min_area,
+                                                               iou_threshold=args.iou_threshold)
+
+        # Store heatmap and bounding boxes for each scale
+        if args.type_scale_aggregator in ['concatenation', 'gated-attention']:
+
+            heatmaps[scale] = {
+                "heatmap": heatmap,
+                "pred_bboxes": predicted_bboxes,
+                "scale_score": scale_score
+            }
+
+            aggregated_heatmap += heatmap * scale_score
+
+
+    # If aggregated heatmap is not already included in heatmaps dict
+    if 'aggregated' not in heatmaps:
+        # Normalize aggregated heatmap to [0,1]
+        aggregated_heatmap = (aggregated_heatmap - aggregated_heatmap.min()) / (
+                    aggregated_heatmap.max() - aggregated_heatmap.min())
+
+        # Extract bounding boxes from aggregated heatmap
+        predicted_bboxes = extract_bounding_boxes_from_heatmap(aggregated_heatmap,
+                                                               quantile_threshold=args.quantile_threshold,
+                                                               max_bboxes=args.max_bboxes, min_area=args.min_area,
+                                                               iou_threshold=args.iou_threshold)
+
+        # Add aggregated heatmap and bboxes to heatmaps dictionary
+        heatmaps["aggregated"] = {
+            "heatmap": aggregated_heatmap,
+            "pred_bboxes": predicted_bboxes
+        }
+
+    return bag_prob, heatmaps
+
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
 
@@ -497,9 +630,9 @@ def main(args):
         with gr.Row():
             classify_button = gr.Button("Run Classifier")
             output_label = gr.Label(label="Result")
+            output_image = gr.Image(label="Output")  # Add a new Image component to display
 
-        classify_button.click(fn=run_classifier, inputs=image_input, outputs=output_label)
-
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_label, output_image])
     demo.launch()
 
 
@@ -509,7 +642,6 @@ def run_classifier(image):
         return "No image uploaded"
 
     # Load and preprocess image
-    # img = Image.open(args.img_dir).convert('RGB')
     with torch.no_grad():
         tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                               torchvision.transforms.Normalize(mean=args.mean, std=args.std),
@@ -525,7 +657,17 @@ def run_classifier(image):
 
         # Process image
         model.to(device)
-        prob = torch.sigmoid(model(x.unsqueeze(0).to(device))).cpu().detach().squeeze().numpy()
+        output = model(x.unsqueeze(0).to(device))
+        bag_prob = torch.sigmoid(output)
+
+        # Visualize detected lesions
+        # img_h = bag_info['img_height']
+        # img_w = bag_info['img_width']
+        img_h, img_w = image.shape[:2]
+
+        vis = visualize_detection(args, model, img)
+
+        prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
     return {"no_calcification": 1-prob, "has_calcification": prob}
 
