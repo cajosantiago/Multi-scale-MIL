@@ -389,6 +389,7 @@ def pad_image(img_array, patch_size, mean, std):
                        mode='constant',
                        value=normalized_black_value
                        )
+    print(padding_left, padding_right, padding_top, padding_bottom)
     return padded_img, (padding_left, padding_right, padding_top, padding_bottom)
 
 class lambda_funct(torchvision.transforms.Lambda):
