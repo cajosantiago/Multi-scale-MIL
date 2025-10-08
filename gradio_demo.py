@@ -17,6 +17,7 @@ import tarfile
 import requests
 from PIL import Image
 import gradio as gr
+from scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation, median_filter, gaussian_filter
 
 os.environ['GRADIO_SERVER_NAME'] = "0.0.0.0"
 
