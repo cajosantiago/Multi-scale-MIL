@@ -550,8 +550,6 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
             patch_size = bag_info['patch_size']
 
             # Calculate ratio for reshaping pixel-level attention scores spatially
-            print(patch_size)
-            print(scale)
             ratio = int(-(-patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0] // 1))
             attention_scores = attention_scores.reshape(len(bag_coords_scale), ratio, ratio)
 
@@ -760,7 +758,6 @@ def run_classifier(image):
             'img_width': x.shape[-1],
             # 'img_dir': img_path
         }
-        print(bag_info)
 
         # Process image
         model.to(device)
