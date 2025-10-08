@@ -462,7 +462,8 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
                 continue
 
             b = [slice_y.start, slice_x.start, slice_y.stop, slice_x.stop]
-            score = get_cumlative_attention(heatmap, b)
+            # score = get_cumlative_attention(heatmap, b)
+            score = cam[bbox[1]:bbox[3], bbox[0]:bbox[2]].sum()
 
             bboxes.append([slice_y.start, slice_x.start, slice_y.stop, slice_x.stop, score])
 
