@@ -350,8 +350,8 @@ def pad_image(img_array, patch_size, mean, std):
         h, w = img_array.size()
 
     # Compute new dimensions that are divisible by patch_size
-    new_h = h + patch_size * (h % patch_size)
-    new_w = w + patch_size * (w % patch_size)
+    new_h = patch_size * (1 + ((h-1) // patch_size))
+    new_w = patch_size * (1 + ((w-1) // patch_size))
 
     # Determine needed padding for width and height
     additional_h = new_h - h
