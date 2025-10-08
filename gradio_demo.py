@@ -547,9 +547,9 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
             patch_size = bag_info['patch_size']
 
             # Calculate ratio for reshaping pixel-level attention scores spatially
-            print(patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0])
+            print(patch_size)
+            print(scale)
             ratio = int(-(-patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0] // 1))
-            print(ratio)
             attention_scores = attention_scores.reshape(len(bag_coords_scale), ratio, ratio)
 
         # Initialize empty tensors for accumulating attention values and counts
