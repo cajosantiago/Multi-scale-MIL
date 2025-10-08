@@ -715,15 +715,22 @@ def main(args):
     ## Launch gradio demo
     # Build Gradio interface
     with gr.Blocks() as demo:
-        gr.Markdown("## 🖼️ My Image Classifier")
-
+        gr.Markdown("## Breast Cancer Detection")
         with gr.Row():
-            image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
+            with gr.Column():
+                image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
+                classify_button = gr.Button("Run Classifier")
+            with gr.Column():
+                output_image = gr.Image(label="Output")
+                output_label = gr.Label(label="Result")
 
-        with gr.Row():
-            classify_button = gr.Button("Run Classifier")
-            output_label = gr.Label(label="Result")
-            output_image = gr.Image(label="Output")  # Add a new Image component to display
+        # with gr.Row():
+        #     image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
+        #
+        # with gr.Row():
+        #     classify_button = gr.Button("Run Classifier")
+        #     output_label = gr.Label(label="Result")
+        #     output_image = gr.Image(label="Output")  # Add a new Image component to display
 
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_label, output_image])
     demo.launch()
