@@ -755,7 +755,7 @@ def run_classifier(image):
             'step_size': args.scales[0] - int(args.scales[0] * args.overlap[0]),
             'img_height': args.img_size[0] + padding_top + padding_bottom,
             'img_width': args.img_size[1] + padding_left + padding_right,
-            'img_dir': img_path
+            # 'img_dir': img_path
         }
 
         # Process image
