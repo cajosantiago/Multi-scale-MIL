@@ -452,6 +452,7 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
     # generate bounding boxes
     bboxes = []
+    print(len(labels))
     for l in range(1, len(labels)):
         slice_x, slice_y = ndimage.find_objects(label_im == l)[0]
 
