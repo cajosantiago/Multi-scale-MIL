@@ -752,8 +752,8 @@ def run_classifier(image):
         bag_info = {
             'patch_size': args.patch_size,
             'step_size': args.patch_size - int(args.patch_size * args.overlap[0]),
-            'img_height': x.shape[0],
-            'img_width': x.shape[1],
+            'img_height': x.shape[-2],
+            'img_width': x.shape[-1],
             # 'img_dir': img_path
         }
         print(bag_info)
