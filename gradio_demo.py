@@ -598,10 +598,11 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         heatmap = torch.from_numpy(gaussian_filter(heatmap, sigma=10))
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
-        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
-                              (heatmap - heatmap[seg_mask != 0].min()) / (
-                                          heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
-                              torch.tensor(0.0))
+        # heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+        #                       (heatmap - heatmap[seg_mask != 0].min()) / (
+        #                                   heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
+        #                       torch.tensor(0.0))
+        heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
 
         # Extract bounding boxes from heatmap
         predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap,
