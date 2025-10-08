@@ -642,7 +642,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
             "pred_bboxes": predicted_bboxes
         }
 
-    return bag_prob, heatmaps
+    return heatmaps, predicted_bboxes
 
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
@@ -766,11 +766,11 @@ def run_classifier(image):
         bag_prob = torch.sigmoid(output)
 
         # Visualize detected lesions
-        vis = visualize_detection(args, model, image, bag_coords, bag_info)
+        heatmaps, predicted_bboxes = visualize_detection(args, model, image, bag_coords, bag_info)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
-    return {"no_calcification": 1-prob, "has_calcification": prob}
+    return {"no_calcification": 1-prob, "has_calcification": prob}, heatmaps
 
 
 
