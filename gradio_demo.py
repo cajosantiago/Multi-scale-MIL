@@ -509,7 +509,7 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
     return bboxes
 
-def visualize_detection(args, model, img, bag_coords):
+def visualize_detection(args, model, img, bag_coords, bag_info):
     img_h, img_w = img.shape[:2]
 
     # Get instance-level attention scores for all scales from the model
@@ -748,6 +748,16 @@ def run_classifier(image):
                                               )
                                               ])
         x, bag_coords, padding = tfm(image)
+        print(padding)
+        # (padding_left, padding_right, padding_top, padding_bottom)
+
+        bag_info = {
+            'patch_size': args.scales[0],
+            'step_size': args.scales[0] - int(args.scales[0] * args.overlap[0]),
+            'img_height': self.args.img_size[0] + padding_top + padding_bottom,
+            'img_width': self.args.img_size[1] + padding_left + padding_right,
+            'img_dir': img_path
+        }
 
         # Process image
         model.to(device)
