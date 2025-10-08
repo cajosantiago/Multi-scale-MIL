@@ -636,13 +636,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                                                                max_bboxes=args.max_bboxes, min_area=args.min_area,
                                                                iou_threshold=args.iou_threshold)
 
-        # Add aggregated heatmap and bboxes to heatmaps dictionary
-        heatmaps["aggregated"] = {
-            "heatmap": aggregated_heatmap,
-            "pred_bboxes": predicted_bboxes
-        }
-
-    return heatmaps, predicted_bboxes
+    return aggregated_heatmap, predicted_bboxes
 
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
