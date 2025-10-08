@@ -450,10 +450,11 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
     labels = np.unique(label_im)
     label_im = np.searchsorted(labels, label_im)  # sort objects from large to small
 
+    print(label_im)
     # generate bounding boxes
     bboxes = []
-    print(len(labels))
     for l in range(1, len(labels)):
+        print(l)
         slice_x, slice_y = ndimage.find_objects(label_im == l)[0]
 
         # Validate bounding box dimensions
