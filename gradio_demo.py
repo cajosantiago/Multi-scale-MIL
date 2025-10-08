@@ -18,7 +18,7 @@ import requests
 from PIL import Image
 import gradio as gr
 
-
+os.environ['GRADIO_SERVER_NAME'] = "0.0.0.0"
 
 def config():
     parser = argparse.ArgumentParser()
