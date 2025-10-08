@@ -748,14 +748,13 @@ def run_classifier(image):
                                               )
                                               ])
         x, bag_coords, padding = tfm(image)
-        print(padding)
-        # (padding_left, padding_right, padding_top, padding_bottom)
+        padding_left, padding_right, padding_top, padding_bottom = padding
 
         bag_info = {
             'patch_size': args.scales[0],
             'step_size': args.scales[0] - int(args.scales[0] * args.overlap[0]),
-            'img_height': self.args.img_size[0] + padding_top + padding_bottom,
-            'img_width': self.args.img_size[1] + padding_left + padding_right,
+            'img_height': args.img_size[0] + padding_top + padding_bottom,
+            'img_width': args.img_size[1] + padding_left + padding_right,
             'img_dir': img_path
         }
 
@@ -765,7 +764,7 @@ def run_classifier(image):
         bag_prob = torch.sigmoid(output)
 
         # Visualize detected lesions
-        vis = visualize_detection(args, model, image, bag_coords)
+        vis = visualize_detection(args, model, image, bag_coords, bag_info)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
