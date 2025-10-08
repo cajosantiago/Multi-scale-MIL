@@ -634,6 +634,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         predicted_bboxes = extract_bounding_boxes_from_heatmap(aggregated_heatmap,
                                                                quantile_threshold=args.quantile_threshold,
                                                                max_bboxes=args.max_bboxes, min_area=args.min_area,
+                                                               iou_threshold=args.iou_threshold)
 
     return aggregated_heatmap.cpu().numpy(), predicted_bboxes
 
