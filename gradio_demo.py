@@ -547,9 +547,8 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
             patch_size = bag_info['patch_size']
 
             # Calculate ratio for reshaping pixel-level attention scores spatially
-            ratio = patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0]
-            attention_scores = attention_scores.reshape(len(bag_coords_scale), math.ceil(ratio),
-                                                        math.ceil(ratio))
+            ratio = int(-(-patch_size / scale if scale != 'aggregated' else patch_size / args.scales[0] // 1))
+            attention_scores = attention_scores.reshape(len(bag_coords_scale), ratio, ratio)
 
         # Initialize empty tensors for accumulating attention values and counts
         attention_map = torch.zeros(img_h, img_w)
@@ -560,7 +559,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
 
             # Get x,y coordinates of the patch (top-left corner)
             x, y = bag_coords_scale[patch_idx, :]
-            x = x.item();
+            x = x.item()
             y = y.item()
 
             x_start = max(0, x)
