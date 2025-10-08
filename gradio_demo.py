@@ -750,7 +750,6 @@ def run_classifier(image):
                                               ])
         x, bag_coords, padding = tfm(image)
         padding_left, padding_right, padding_top, padding_bottom = padding
-        print(padding)
 
         bag_info = {
             'patch_size': args.patch_size,
@@ -759,7 +758,7 @@ def run_classifier(image):
             'img_width': args.img_size[1] + padding_left + padding_right,
             # 'img_dir': img_path
         }
-        print(bad_info)
+        print(bag_info)
 
         # Process image
         model.to(device)
