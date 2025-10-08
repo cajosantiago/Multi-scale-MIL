@@ -509,7 +509,7 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
     return bboxes
 
-def visualize_detection(args, model, img):
+def visualize_detection(args, model, img, bag_coords):
     img_h, img_w = img.shape[:2]
 
     # Get instance-level attention scores for all scales from the model
@@ -551,7 +551,7 @@ def visualize_detection(args, model, img):
             attention_scores = attention_scores.reshape(len(bag_coords_scale), math.ceil(ratio),
                                                         math.ceil(ratio))
 
-            # Initialize empty tensors for accumulating attention values and counts
+        # Initialize empty tensors for accumulating attention values and counts
         attention_map = torch.zeros(img_h, img_w)
         attention_map_counts = torch.zeros(img_h, img_w)
 
@@ -755,7 +755,7 @@ def run_classifier(image):
         bag_prob = torch.sigmoid(output)
 
         # Visualize detected lesions
-        vis = visualize_detection(args, model, image)
+        vis = visualize_detection(args, model, image, bag_coords)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
