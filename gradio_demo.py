@@ -635,8 +635,9 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                                                                quantile_threshold=args.quantile_threshold,
                                                                max_bboxes=args.max_bboxes, min_area=args.min_area,
                                                                iou_threshold=args.iou_threshold)
-
-    return aggregated_heatmap, predicted_bboxes
+    print(aggregated_heatmap.shape)
+    print(predicted_bboxes)
+    return aggregated_heatmap.cpu().numpy(), predicted_bboxes
 
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
