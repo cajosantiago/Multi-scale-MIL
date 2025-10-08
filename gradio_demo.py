@@ -750,10 +750,11 @@ def run_classifier(image):
                                               ])
         x, bag_coords, padding = tfm(image)
         padding_left, padding_right, padding_top, padding_bottom = padding
+        print(padding)
 
         bag_info = {
-            'patch_size': args.scales[0],
-            'step_size': args.scales[0] - int(args.scales[0] * args.overlap[0]),
+            'patch_size': args.patch_size,
+            'step_size': args.patch_size - int(args.patch_size * args.overlap[0]),
             'img_height': args.img_size[0] + padding_top + padding_bottom,
             'img_width': args.img_size[1] + padding_left + padding_right,
             # 'img_dir': img_path
