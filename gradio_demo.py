@@ -515,7 +515,6 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
 def visualize_detection(args, model, img, bag_coords, bag_info):
     img_h, img_w = img.shape[:2]
-    print(img.shape)
 
     # Get instance-level attention scores for all scales from the model
     scale_attentions_dict = model.get_patch_scores()
@@ -584,6 +583,9 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                             patch_map.max() - patch_map.min() + torch.finfo(torch.float16).eps)
 
                 # Add normalized patch attention to the aggregated attention map for this scale
+                print(patch_map.shape)
+                print(attention_map.shape)
+                print(y_start, y_end, x_start, x_end)
                 attention_map[y_start:y_end, x_start:x_end] += patch_map
 
             elif args.multi_scale_model == 'msp':
