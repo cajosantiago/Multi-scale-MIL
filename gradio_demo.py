@@ -331,7 +331,7 @@ class Patching:
         return patches, patch_coords, padding
 
 
-def pad_image(img_array, patch_size, mean, std):
+def pad_image(img_array, patch_size, step_size, mean, std):
     """
     Pads an image tensor so that its height and width are multiples of the patch size.
 
@@ -353,8 +353,10 @@ def pad_image(img_array, patch_size, mean, std):
         h, w = img_array.size()
 
     # Compute new dimensions that are divisible by patch_size
-    new_h = patch_size * (1 + ((h-1) // patch_size))
-    new_w = patch_size * (1 + ((w-1) // patch_size))
+    n_patches_h = floor((h - patch_size) / step_size) + 1
+    n_patches_w = floor((w - patch_size) / step_size) + 1
+    new_h = (n_patches_h - 1) * step_size + patch_size
+    new_w = (n_patches_w - 1) * step_size + patch_size
 
     # Determine needed padding for width and height
     additional_h = new_h - h
