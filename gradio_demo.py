@@ -359,7 +359,6 @@ def pad_image(img_array, patch_size, overlap, mean, std):
     n_patches_w = math.ceil((w - patch_size) / step_size) + 1
     new_h = (n_patches_h - 1) * step_size + patch_size
     new_w = (n_patches_w - 1) * step_size + patch_size
-    print(step_size, new_h, new_w)
 
     # Determine needed padding for width and height
     additional_h = new_h - h
@@ -589,9 +588,6 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                             patch_map.max() - patch_map.min() + torch.finfo(torch.float16).eps)
 
                 # Add normalized patch attention to the aggregated attention map for this scale
-                print(patch_map.shape)
-                print(attention_map.shape)
-                print(y_start, y_end, x_start, x_end)
                 attention_map[y_start:y_end, x_start:x_end] += patch_map
 
             elif args.multi_scale_model == 'msp':
@@ -762,7 +758,6 @@ def run_classifier(image):
                                               )
                                               ])
         x, bag_coords, padding = tfm(image)
-        print(image.shape)
         width, height = image.shape[1], image.shape[0]
         bag_info = {
             'patch_size': args.patch_size,
@@ -779,6 +774,7 @@ def run_classifier(image):
 
         # Visualize detected lesions
         heatmaps, predicted_bboxes = visualize_detection(args, model, image, bag_coords, bag_info)
+        print(predicted_bboxes)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
     print('prob:', prob)
