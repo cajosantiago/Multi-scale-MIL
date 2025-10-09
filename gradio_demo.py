@@ -514,7 +514,7 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
     return bboxes
 
 def visualize_detection(args, model, img, bag_coords, bag_info):
-    img_h, img_w = img.shape[:2]
+    img_h, img_w = bag_info{'img_height'}, bag_info{'img_width'}
 
     # Get instance-level attention scores for all scales from the model
     scale_attentions_dict = model.get_patch_scores()
