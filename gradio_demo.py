@@ -407,16 +407,17 @@ class lambda_funct(torchvision.transforms.Lambda):
         std (float): Std for normalization.
     """
 
-    def __init__(self, lambd, patch_size, mean, std):
+    def __init__(self, lambd, patch_size, step_size, mean, std):
         super().__init__(lambda_funct)
 
         self.lambd = lambd
         self.patch_size = patch_size
+        self.step_size = step_size
         self.mean = mean
         self.std = std
 
     def __call__(self, img):
-        return self.lambd(img, self.patch_size, self.mean, self.std)
+        return self.lambd(img, self.patch_size, self.step_size, self.mean, self.std)
 
 def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bboxes=3, min_area=230,
                                         iou_threshold=0.5):
