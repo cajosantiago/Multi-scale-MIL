@@ -332,7 +332,7 @@ class Patching:
         return patches, patch_coords, padding
 
 
-def pad_image(img_array, patch_size, step_size, mean, std):
+def pad_image(img_array, patch_size, overlap, mean, std):
     """
     Pads an image tensor so that its height and width are multiples of the patch size.
 
@@ -353,6 +353,7 @@ def pad_image(img_array, patch_size, step_size, mean, std):
     else:  # Just height and width
         h, w = img_array.size()
 
+    step_size = patch_size - int(patch_size * overlap[0])
     # Compute new dimensions that are divisible by patch_size
     n_patches_h = math.ceil((h - patch_size) / step_size) + 1
     n_patches_w = math.ceil((w - patch_size) / step_size) + 1
@@ -408,17 +409,17 @@ class lambda_funct(torchvision.transforms.Lambda):
         std (float): Std for normalization.
     """
 
-    def __init__(self, lambd, patch_size, step_size, mean, std):
+    def __init__(self, lambd, patch_size, overlap, mean, std):
         super().__init__(lambda_funct)
 
         self.lambd = lambd
         self.patch_size = patch_size
-        self.step_size = step_size
+        self.overlap = overlap
         self.mean = mean
         self.std = std
 
     def __call__(self, img):
-        return self.lambd(img, self.patch_size, self.step_size, self.mean, self.std)
+        return self.lambd(img, self.patch_size, self.overlap, self.mean, self.std)
 
 def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bboxes=3, min_area=230,
                                         iou_threshold=0.5):
