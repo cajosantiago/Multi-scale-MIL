@@ -778,7 +778,7 @@ def run_classifier(image):
         prob = bag_prob.cpu().detach().squeeze().numpy()
 
     # Draw bounding boxes
-    image_with_boxes = image.copy()
+    image_with_boxes = Image.fromarray(image)
     draw = ImageDraw.Draw(image_with_boxes)
     for box in predicted_bboxes:
         draw.rectangle(box, outline="red", width=3)
