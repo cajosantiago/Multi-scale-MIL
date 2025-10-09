@@ -783,7 +783,7 @@ def run_classifier(image):
     for box in predicted_bboxes:
         x1, y1, x2, y2, score = box
         draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-        draw.text((x1, y1 - 10), f"suspicious calcification ({int(score * 100)}%)", fill="red")
+        draw.text((x1, y1 - 15), f"suspicious calcification ({score})", fill="red")
     return {"no_calcification": 1-prob, "has_calcification": prob}, image_with_boxes
 
 
