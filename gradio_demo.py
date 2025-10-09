@@ -782,6 +782,7 @@ def run_classifier(image):
     draw = ImageDraw.Draw(image_with_boxes)
     for box in predicted_bboxes:
         draw.rectangle(box, outline="red", width=3)
+        draw.text((box[0], box[1] - 10), 'calcifications', fill="green")
     return {"no_calcification": 1-prob, "has_calcification": prob}, image_with_boxes
 
 
