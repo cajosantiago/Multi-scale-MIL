@@ -749,7 +749,7 @@ def run_classifier(image):
     with torch.no_grad():
         tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                               torchvision.transforms.Normalize(mean=args.mean, std=args.std),
-                                              lambda_funct(pad_image, args.patch_size, args.mean, args.std),
+                                              lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std),
                                               Patching(
                                                   patch_size=args.patch_size,
                                                   overlap=args.overlap,
