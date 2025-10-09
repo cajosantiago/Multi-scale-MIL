@@ -757,7 +757,7 @@ def run_classifier(image):
                                                   scales=args.scales
                                               )
                                               ])
-        x, bag_coords, padding = tfm(image)
+        x, bag_coords, padding = tfm(image) #(padding_left, padding_right, padding_top, padding_bottom)
         width, height = image.shape[1], image.shape[0]
         bag_info = {
             'patch_size': args.patch_size,
@@ -782,8 +782,12 @@ def run_classifier(image):
     draw = ImageDraw.Draw(image_with_boxes)
     for box in predicted_bboxes:
         x1, y1, x2, y2, score = box
+        print(score)
+        #Remove padding
+        x1 -= padding[0]
+        y1 -= padding[2]
         draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-        draw.text((x1, y1 - 15), f"suspicious calcification ({score})", fill="red")
+        draw.text((x1, y1 - 15), "suspicious calc", fill="red")
     return {"no_calcification": 1-prob, "has_calcification": prob}, image_with_boxes
 
 
