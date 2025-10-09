@@ -354,11 +354,12 @@ def pad_image(img_array, patch_size, overlap, mean, std):
         h, w = img_array.size()
 
     step_size = patch_size - int(patch_size * overlap[0])
-    # Compute new dimensions that are divisible by patch_size
+    # Compute new dimensions that give a integer number of patches
     n_patches_h = math.ceil((h - patch_size) / step_size) + 1
     n_patches_w = math.ceil((w - patch_size) / step_size) + 1
     new_h = (n_patches_h - 1) * step_size + patch_size
     new_w = (n_patches_w - 1) * step_size + patch_size
+    print(step_size, new_h, new_w)
 
     # Determine needed padding for width and height
     additional_h = new_h - h
