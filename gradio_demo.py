@@ -15,7 +15,7 @@ from pathlib import Path
 import gdown
 import tarfile
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw
 import gradio as gr
 from scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation, median_filter, gaussian_filter
 from scipy import ndimage
@@ -774,13 +774,15 @@ def run_classifier(image):
 
         # Visualize detected lesions
         heatmaps, predicted_bboxes = visualize_detection(args, model, image, bag_coords, bag_info)
-        print(predicted_bboxes)
 
         prob = bag_prob.cpu().detach().squeeze().numpy()
-    print('prob:', prob)
-    return {"no_calcification": 1-prob, "has_calcification": prob}, heatmaps
 
-
+    # Draw bounding boxes
+    image_with_boxes = image.copy()
+    draw = ImageDraw.Draw(image_with_boxes)
+    for box in predicted_bboxes:
+        draw.rectangle(box, outline="red", width=3)
+    return {"no_calcification": 1-prob, "has_calcification": prob}, image_with_boxes
 
 
 if __name__ == "__main__":
