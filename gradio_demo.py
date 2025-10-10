@@ -24,16 +24,15 @@ import math
 from argparse import Namespace
 
 args_mass = Namespace(
-    overlap=0.75,
     mil_type='pyramidal_mil',
     pooling_type='gated-attention',
-    type_scale_aggregator='gated-attention',
+    type_mil_encoder='mlp'
 )
 args_calc = Namespace(
     mil_type='pyramidal_mil',
     pooling_type='pma',
-    type_scale_aggregator='gated-isab',
     trans_layer_norm=True,
+    type_mil_encoder='isab'
 )
 
 def config():
