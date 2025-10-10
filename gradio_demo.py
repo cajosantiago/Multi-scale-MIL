@@ -61,7 +61,7 @@ def config():
     # parser.add_argument("--data_frac", default=1.0, type=float, help="Fraction of data to be used for training")
     # parser.add_argument("--label", default="Suspicious_Calcification", type=str, help="Mass or Suspicious_Calcification")
     parser.add_argument("--num-classes", default=1, type=int)
-    parser.add_argument("--n_classes", default=1, type=int)
+    parser.add_argument("--n_class", default=1, type=int)
     # parser.add_argument("--n_runs", default=1, type=int)
     # parser.add_argument("--start_run", default=0, type=int)
     # parser.add_argument('--val_split', type=float, default=0.2, help='val split ratio (default: 0.2)')
