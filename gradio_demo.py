@@ -51,7 +51,7 @@ def config():
     # parser.add_argument("--img_dir", default="test_image.png", type=str,
     #                     help="Path to image file")
 
-    # parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
+    parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
     # parser.add_argument('--evaluation', action='store_true', default=False, help='Evaluation mode.')
     # parser.add_argument('--eval_set', default='test', choices=['val', 'test'], type=str, help="")
 
