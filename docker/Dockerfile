@@ -12,6 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdown 'https://drive.google.com/uc?id=1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI' && \
     gdown 'https://drive.google.com/uc?id=1ptgub09TjB2oCpm2ij2OyaVDKT_5y8D0' \
 
-EXPOSE 7860
+#EXPOSE 7860
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 WORKDIR /home
