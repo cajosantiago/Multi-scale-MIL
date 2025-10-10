@@ -142,30 +142,30 @@ def config():
     # parser.add_argument('--model_dir', default='./models/',)
 
     # Data augmentation settings
-    # parser.add_argument("--balanced-dataloader", default='n', type=str,
-    #                     help='Enable weighted sampling during training (default: False).')
-    # parser.add_argument("--data_aug", action='store_true', default=False)
-    #
-    # parser.add_argument("--alpha", default=10, type=float)
-    # parser.add_argument("--sigma", default=15, type=float)
-    # parser.add_argument("--p", default=1.0, type=float)
-    #
+    parser.add_argument("--balanced-dataloader", default='n', type=str,
+                        help='Enable weighted sampling during training (default: False).')
+    parser.add_argument("--data_aug", action='store_true', default=False)
+
+    parser.add_argument("--alpha", default=10, type=float)
+    parser.add_argument("--sigma", default=15, type=float)
+    parser.add_argument("--p", default=1.0, type=float)
+
     # # LR scheduler settings
-    # parser.add_argument("--lr", default=5.0e-5, type=float)
-    # parser.add_argument("--warmup-epochs", default=1, type=float)
-    # parser.add_argument("--epochs-warmup", default=0, type=float)
-    # parser.add_argument("--num_cycles", default=0.5, type=float)
-    #
+    parser.add_argument("--lr", default=5.0e-5, type=float)
+    parser.add_argument("--warmup-epochs", default=1, type=float)
+    parser.add_argument("--epochs-warmup", default=0, type=float)
+    parser.add_argument("--num_cycles", default=0.5, type=float)
+
     # # Regularization parameters
-    # parser.add_argument('--drop_classhead', type=float, default=0.0, metavar='PCT',
-    #                     help='Dropout rate used in the classification head (default: 0.)')
-    # parser.add_argument('--drop_attention_pool', type=float, default=.25, metavar='PCT',
-    #                     help='Dropout rate used in the attention pooling mechanism (default: 0.)')
-    # parser.add_argument('--drop_mha', type=float, default=0.0, metavar='PCT',
-    #                     help='Dropout rate used in the attention pooling mechanism (default: 0.)')
-    # parser.add_argument('--fcl_dropout', type=float, default=0.25)
-    # parser.add_argument("--lamda", type=float, default=0.0,
-    #                     help='lambda used for balancing cross-entropy loss and rank loss.')
+    parser.add_argument('--drop_classhead', type=float, default=0.0, metavar='PCT',
+                        help='Dropout rate used in the classification head (default: 0.)')
+    parser.add_argument('--drop_attention_pool', type=float, default=.25, metavar='PCT',
+                        help='Dropout rate used in the attention pooling mechanism (default: 0.)')
+    parser.add_argument('--drop_mha', type=float, default=0.0, metavar='PCT',
+                        help='Dropout rate used in the attention pooling mechanism (default: 0.)')
+    parser.add_argument('--fcl_dropout', type=float, default=0.25)
+    parser.add_argument("--lamda", type=float, default=0.0,
+                        help='lambda used for balancing cross-entropy loss and rank loss.')
 
     # ROI evaluation parameters
     parser.add_argument('--roi_eval', action='store_true', default=False,
