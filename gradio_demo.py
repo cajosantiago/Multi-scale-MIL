@@ -737,9 +737,10 @@ def main(args):
                 classify_button = gr.Button("Process Image")
             with gr.Column():
                 output_image = gr.Image(label="Findings")
-                output_label = gr.Label(label="Result")
+                output_calc_label = gr.Label(label="Calcifications")
+                output_mass_label = gr.Label(label="Masses")
 
-        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_label, output_image])
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
     demo.launch()
 
 
@@ -802,9 +803,10 @@ def run_classifier(image):
         y1 -= padding[2]
         draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
         draw.text((x1, y1 - 15), "mass", fill="red")
-    return ({"no_calcification": 1-prob_calc,
-            "has_calcification": prob_calc,
-            "no_mass": 1-prob_mass, "has_mass": prob_mass},
+    return ({"No": 1-prob_calc,
+            "Yes": prob_calc},
+            {"No": 1-prob_mass,
+             "Yes": prob_mass},
             image_with_boxes)
 
 
