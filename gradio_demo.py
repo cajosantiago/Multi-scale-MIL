@@ -792,6 +792,7 @@ def run_classifier(image):
     if prob_calc>.4:
         for box in predicted_bboxes_calc:
             x1, y1, x2, y2, score = box
+            print(score)
             #Remove padding
             x1 -= padding[0]
             y1 -= padding[2]
@@ -800,6 +801,7 @@ def run_classifier(image):
     if prob_mass>.4:
         for box in predicted_bboxes_mass:
             x1, y1, x2, y2, score = box
+            print(score)
             #Remove padding
             x1 -= padding[0]
             y1 -= padding[2]
