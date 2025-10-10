@@ -789,20 +789,22 @@ def run_classifier(image):
     # Draw bounding boxes
     image_with_boxes = Image.fromarray(image)
     draw = ImageDraw.Draw(image_with_boxes)
-    for box in predicted_bboxes_calc:
-        x1, y1, x2, y2, score = box
-        #Remove padding
-        x1 -= padding[0]
-        y1 -= padding[2]
-        draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-        draw.text((x1, y1 - 15), "suspicious calc", fill="red")
-    for box in predicted_bboxes_mass:
-        x1, y1, x2, y2, score = box
-        #Remove padding
-        x1 -= padding[0]
-        y1 -= padding[2]
-        draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-        draw.text((x1, y1 - 15), "mass", fill="red")
+    if prob_calc>.4:
+        for box in predicted_bboxes_calc:
+            x1, y1, x2, y2, score = box
+            #Remove padding
+            x1 -= padding[0]
+            y1 -= padding[2]
+            draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
+            draw.text((x1, y1 - 15), "suspicious calc", fill="red")
+    if prob_mass>.4:
+        for box in predicted_bboxes_mass:
+            x1, y1, x2, y2, score = box
+            #Remove padding
+            x1 -= padding[0]
+            y1 -= padding[2]
+            draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
+            draw.text((x1, y1 - 15), "mass", fill="red")
     return ({"No": 1-prob_calc,
             "Yes": prob_calc},
             {"No": 1-prob_mass,
