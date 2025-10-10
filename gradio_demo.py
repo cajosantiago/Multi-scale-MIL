@@ -36,8 +36,6 @@ args_calc = Namespace(
     trans_layer_norm=True,
 )
 
-os.environ['GRADIO_SERVER_NAME'] = "0.0.0.0"
-
 def config():
     parser = argparse.ArgumentParser()
 
@@ -721,10 +719,10 @@ def main(args):
     global model_mass
     vars(args).update(vars(args_calc))
     model_mass = build_model(args)
-    checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_calcifications.pth')
+    checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_mass.pth')
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/file/d/1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI/view?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/file/d/1ptgub09TjB2oCpm2ij2OyaVDKT_5y8D0/view?usp=sharing', checkpoint_path)
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_mass.load_state_dict(checkpoint['model'], strict=False)
     model_mass.is_training = False  # Set model mode for evaluation
