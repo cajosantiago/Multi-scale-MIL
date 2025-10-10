@@ -40,18 +40,18 @@ def config():
     parser = argparse.ArgumentParser()
 
     # Folders
-    # parser.add_argument('--output_dir', metavar='DIR', default='Mammo-CLIP-output/out_splits_new',
-    #                     help='path to output logs')
-    # parser.add_argument("--data_dir", default="datasets/Vindir-mammoclip", type=str, help="Path to data file")
+    parser.add_argument('--output_dir', metavar='DIR', default='Mammo-CLIP-output/out_splits_new',
+                        help='path to output logs')
+    parser.add_argument("--data_dir", default="datasets/Vindir-mammoclip", type=str, help="Path to data file")
     parser.add_argument("--clip_chk_pt_path", default='checkpoints/b2-model-best-epoch-10.tar', type=str, help="Path to Mammo-CLIP chkpt")
-    # parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
-    # parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
-    # parser.add_argument("--img_dir", default="test_image.png", type=str,
-    #                     help="Path to image file")
+    parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
+    parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
+    parser.add_argument("--img_dir", default="test_image.png", type=str,
+                        help="Path to image file")
 
     parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
-    # parser.add_argument('--evaluation', action='store_true', default=False, help='Evaluation mode.')
-    # parser.add_argument('--eval_set', default='test', choices=['val', 'test'], type=str, help="")
+    parser.add_argument('--evaluation', action='store_true', default=False, help='Evaluation mode.')
+    parser.add_argument('--eval_set', default='test', choices=['val', 'test'], type=str, help="")
 
     # Data settings
     parser.add_argument("--img-size", nargs='+', default=[1520, 912])
@@ -81,9 +81,9 @@ def config():
     parser.add_argument("--feat_dim", default=352, type=int)
 
     # Patch extraction
-    # parser.add_argument('--patching', action='store_true', default=False,
-    #                     help='Wether to perform patching on full-resolution images. If false, it will consider previously extracted patches that were saved in a directory (default: False)')
-    # parser.add_argument('--source_image', type=str, default='patches', choices=['patches', 'full_image'])
+    parser.add_argument('--patching', action='store_true', default=False,
+                        help='Wether to perform patching on full-resolution images. If false, it will consider previously extracted patches that were saved in a directory (default: False)')
+    parser.add_argument('--source_image', type=str, default='patches', choices=['patches', 'full_image'])
     parser.add_argument('--patch_size', type=int, default=512)
     parser.add_argument('--overlap', type=float, nargs='*', default=[0.75])
 
