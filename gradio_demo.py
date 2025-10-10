@@ -187,15 +187,15 @@ def config():
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--apex", default="y", type=str)
 
-    ## Misc
-    # parser.add_argument("--seed", default=10, type=int)
-    # parser.add_argument("--print-freq", default=5000, type=int)
-    # parser.add_argument("--log-freq", default=1000, type=int)
-    # parser.add_argument("--running-interactive", default='n', type=str)
-    # parser.add_argument('--eval_scheme', default='kruns_train+val', type=str,
-    #                     help='Evaluation scheme [kruns_train+val | kfold_cv+test ]')
-    # parser.add_argument('--resume', default=None, type=str)
-    # parser.add_argument('--test_example', default=None, type=str)
+    # Misc
+    parser.add_argument("--seed", default=10, type=int)
+    parser.add_argument("--print-freq", default=5000, type=int)
+    parser.add_argument("--log-freq", default=1000, type=int)
+    parser.add_argument("--running-interactive", default='n', type=str)
+    parser.add_argument('--eval_scheme', default='kruns_train+val', type=str,
+                        help='Evaluation scheme [kruns_train+val | kfold_cv+test ]')
+    parser.add_argument('--resume', default=None, type=str)
+    parser.add_argument('--test_example', default=None, type=str)
 
     return parser.parse_args()
 
