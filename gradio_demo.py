@@ -132,14 +132,14 @@ def config():
 
     # Nested MIL
     parser.add_argument('--nested_model', action='store_true', default=False)
-    # parser.add_argument('--type_region_aggregator', type=str,
-    #                     choices=['concatenation', 'max_p', 'mean_p', 'attention', 'gated-attention'], default=None)
-    # parser.add_argument('--type_region_encoder', default=None, choices=['mlp', 'sab', 'isab'], type=str,
-    #                     help="Type of MIL encoder.")
-    # parser.add_argument('--type_region_pooling', default=None,
-    #                     choices=['max', 'mean', 'attention', 'gated-attention', 'pma'], type=str,
-    #                     help="MIL pooling operator")
-    # parser.add_argument('--model_dir', default='./models/',)
+    parser.add_argument('--type_region_aggregator', type=str,
+                        choices=['concatenation', 'max_p', 'mean_p', 'attention', 'gated-attention'], default=None)
+    parser.add_argument('--type_region_encoder', default=None, choices=['mlp', 'sab', 'isab'], type=str,
+                        help="Type of MIL encoder.")
+    parser.add_argument('--type_region_pooling', default=None,
+                        choices=['max', 'mean', 'attention', 'gated-attention', 'pma'], type=str,
+                        help="MIL pooling operator")
+    parser.add_argument('--model_dir', default='./models/',)
 
     # Data augmentation settings
     parser.add_argument("--balanced-dataloader", default='n', type=str,
