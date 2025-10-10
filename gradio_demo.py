@@ -21,6 +21,20 @@ from scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation, medi
 from scipy import ndimage
 from torchvision.ops import nms
 import math
+from argparse import Namespace
+
+args_mass = Namespace(
+    overlap=0.75,
+    mil_type='pyramidal_mil',
+    pooling_type='gated-attention',
+    type_scale_aggregator='gated-attention',
+)
+args_calc = Namespace(
+    mil_type='pyramidal_mil',
+    pooling_type='pma',
+    type_scale_aggregator='gated-isab',
+    trans_layer_norm=True,
+)
 
 os.environ['GRADIO_SERVER_NAME'] = "0.0.0.0"
 
@@ -28,30 +42,30 @@ def config():
     parser = argparse.ArgumentParser()
 
     # Folders
-    parser.add_argument('--output_dir', metavar='DIR', default='Mammo-CLIP-output/out_splits_new',
-                        help='path to output logs')
-    parser.add_argument("--data_dir", default="datasets/Vindir-mammoclip", type=str, help="Path to data file")
+    # parser.add_argument('--output_dir', metavar='DIR', default='Mammo-CLIP-output/out_splits_new',
+    #                     help='path to output logs')
+    # parser.add_argument("--data_dir", default="datasets/Vindir-mammoclip", type=str, help="Path to data file")
     parser.add_argument("--clip_chk_pt_path", default='checkpoints/b2-model-best-epoch-10.tar', type=str, help="Path to Mammo-CLIP chkpt")
-    parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
-    parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
-    parser.add_argument("--img_dir", default="test_image.png", type=str,
-                        help="Path to image file")
+    # parser.add_argument("--csv_file", default="grouped_df.csv", type=str, help="data csv file")
+    # parser.add_argument('--feat_dir', default='new_extracted_features', type=str)
+    # parser.add_argument("--img_dir", default="test_image.png", type=str,
+    #                     help="Path to image file")
 
-    parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
-    parser.add_argument('--evaluation', action='store_true', default=False, help='Evaluation mode.')
-    parser.add_argument('--eval_set', default='test', choices=['val', 'test'], type=str, help="")
+    # parser.add_argument('--train', action='store_true', default=False, help='Training mode.')
+    # parser.add_argument('--evaluation', action='store_true', default=False, help='Evaluation mode.')
+    # parser.add_argument('--eval_set', default='test', choices=['val', 'test'], type=str, help="")
 
     # Data settings
-    parser.add_argument("--img-size", nargs='+', default=[1520, 912])
-    parser.add_argument("--dataset", default="ViNDr", type=str, help="Dataset name.")
-    parser.add_argument("--data_frac", default=1.0, type=float, help="Fraction of data to be used for training")
-    parser.add_argument("--label", default="Suspicious_Calcification", type=str, help="Mass or Suspicious_Calcification")
+    # parser.add_argument("--img-size", nargs='+', default=[1520, 912])
+    # parser.add_argument("--dataset", default="ViNDr", type=str, help="Dataset name.")
+    # parser.add_argument("--data_frac", default=1.0, type=float, help="Fraction of data to be used for training")
+    # parser.add_argument("--label", default="Suspicious_Calcification", type=str, help="Mass or Suspicious_Calcification")
     parser.add_argument("--num-classes", default=1, type=int)
-    parser.add_argument("--n_runs", default=1, type=int)
-    parser.add_argument("--start_run", default=0, type=int)
-    parser.add_argument('--val_split', type=float, default=0.2, help='val split ratio (default: 0.2)')
-    parser.add_argument("--n_folds", default=1, type=int)
-    parser.add_argument("--start-fold", default=0, type=int)
+    # parser.add_argument("--n_runs", default=1, type=int)
+    # parser.add_argument("--start_run", default=0, type=int)
+    # parser.add_argument('--val_split', type=float, default=0.2, help='val split ratio (default: 0.2)')
+    # parser.add_argument("--n_folds", default=1, type=int)
+    # parser.add_argument("--start-fold", default=0, type=int)
     parser.add_argument("--mean", default=0.3089279, type=float)
     parser.add_argument("--std", default=0.25053555408335154, type=float)
 
@@ -68,9 +82,9 @@ def config():
     parser.add_argument("--feat_dim", default=352, type=int)
 
     # Patch extraction
-    parser.add_argument('--patching', action='store_true', default=False,
-                        help='Wether to perform patching on full-resolution images. If false, it will consider previously extracted patches that were saved in a directory (default: False)')
-    parser.add_argument('--source_image', type=str, default='patches', choices=['patches', 'full_image'])
+    # parser.add_argument('--patching', action='store_true', default=False,
+    #                     help='Wether to perform patching on full-resolution images. If false, it will consider previously extracted patches that were saved in a directory (default: False)')
+    # parser.add_argument('--source_image', type=str, default='patches', choices=['patches', 'full_image'])
     parser.add_argument('--patch_size', type=int, default=512)
     parser.add_argument('--overlap', type=float, nargs='*', default=[0.75])
 
@@ -117,40 +131,40 @@ def config():
 
     # Nested MIL
     parser.add_argument('--nested_model', action='store_true', default=False)
-    parser.add_argument('--type_region_aggregator', type=str,
-                        choices=['concatenation', 'max_p', 'mean_p', 'attention', 'gated-attention'], default=None)
-    parser.add_argument('--type_region_encoder', default=None, choices=['mlp', 'sab', 'isab'], type=str,
-                        help="Type of MIL encoder.")
-    parser.add_argument('--type_region_pooling', default=None,
-                        choices=['max', 'mean', 'attention', 'gated-attention', 'pma'], type=str,
-                        help="MIL pooling operator")
-    parser.add_argument('--model_dir', default='./models/',)
+    # parser.add_argument('--type_region_aggregator', type=str,
+    #                     choices=['concatenation', 'max_p', 'mean_p', 'attention', 'gated-attention'], default=None)
+    # parser.add_argument('--type_region_encoder', default=None, choices=['mlp', 'sab', 'isab'], type=str,
+    #                     help="Type of MIL encoder.")
+    # parser.add_argument('--type_region_pooling', default=None,
+    #                     choices=['max', 'mean', 'attention', 'gated-attention', 'pma'], type=str,
+    #                     help="MIL pooling operator")
+    # parser.add_argument('--model_dir', default='./models/',)
 
     # Data augmentation settings
-    parser.add_argument("--balanced-dataloader", default='n', type=str,
-                        help='Enable weighted sampling during training (default: False).')
-    parser.add_argument("--data_aug", action='store_true', default=False)
-
-    parser.add_argument("--alpha", default=10, type=float)
-    parser.add_argument("--sigma", default=15, type=float)
-    parser.add_argument("--p", default=1.0, type=float)
-
-    # LR scheduler settings
-    parser.add_argument("--lr", default=5.0e-5, type=float)
-    parser.add_argument("--warmup-epochs", default=1, type=float)
-    parser.add_argument("--epochs-warmup", default=0, type=float)
-    parser.add_argument("--num_cycles", default=0.5, type=float)
-
-    # Regularization parameters
-    parser.add_argument('--drop_classhead', type=float, default=0.0, metavar='PCT',
-                        help='Dropout rate used in the classification head (default: 0.)')
-    parser.add_argument('--drop_attention_pool', type=float, default=0.0, metavar='PCT',
-                        help='Dropout rate used in the attention pooling mechanism (default: 0.)')
-    parser.add_argument('--drop_mha', type=float, default=0.0, metavar='PCT',
-                        help='Dropout rate used in the attention pooling mechanism (default: 0.)')
-    parser.add_argument('--fcl_dropout', type=float, default=0.0)
-    parser.add_argument("--lamda", type=float, default=0.0,
-                        help='lambda used for balancing cross-entropy loss and rank loss.')
+    # parser.add_argument("--balanced-dataloader", default='n', type=str,
+    #                     help='Enable weighted sampling during training (default: False).')
+    # parser.add_argument("--data_aug", action='store_true', default=False)
+    #
+    # parser.add_argument("--alpha", default=10, type=float)
+    # parser.add_argument("--sigma", default=15, type=float)
+    # parser.add_argument("--p", default=1.0, type=float)
+    #
+    # # LR scheduler settings
+    # parser.add_argument("--lr", default=5.0e-5, type=float)
+    # parser.add_argument("--warmup-epochs", default=1, type=float)
+    # parser.add_argument("--epochs-warmup", default=0, type=float)
+    # parser.add_argument("--num_cycles", default=0.5, type=float)
+    #
+    # # Regularization parameters
+    # parser.add_argument('--drop_classhead', type=float, default=0.0, metavar='PCT',
+    #                     help='Dropout rate used in the classification head (default: 0.)')
+    # parser.add_argument('--drop_attention_pool', type=float, default=.25, metavar='PCT',
+    #                     help='Dropout rate used in the attention pooling mechanism (default: 0.)')
+    # parser.add_argument('--drop_mha', type=float, default=0.0, metavar='PCT',
+    #                     help='Dropout rate used in the attention pooling mechanism (default: 0.)')
+    # parser.add_argument('--fcl_dropout', type=float, default=0.25)
+    # parser.add_argument("--lamda", type=float, default=0.0,
+    #                     help='lambda used for balancing cross-entropy loss and rank loss.')
 
     # ROI evaluation parameters
     parser.add_argument('--roi_eval', action='store_true', default=False,
@@ -174,15 +188,15 @@ def config():
     parser.add_argument("--device", default="cuda", type=str)
     parser.add_argument("--apex", default="y", type=str)
 
-    # Misc
-    parser.add_argument("--seed", default=10, type=int)
-    parser.add_argument("--print-freq", default=5000, type=int)
-    parser.add_argument("--log-freq", default=1000, type=int)
-    parser.add_argument("--running-interactive", default='n', type=str)
-    parser.add_argument('--eval_scheme', default='kruns_train+val', type=str,
-                        help='Evaluation scheme [kruns_train+val | kfold_cv+test ]')
-    parser.add_argument('--resume', default=None, type=str)
-    parser.add_argument('--test_example', default=None, type=str)
+    ## Misc
+    # parser.add_argument("--seed", default=10, type=int)
+    # parser.add_argument("--print-freq", default=5000, type=int)
+    # parser.add_argument("--log-freq", default=1000, type=int)
+    # parser.add_argument("--running-interactive", default='n', type=str)
+    # parser.add_argument('--eval_scheme', default='kruns_train+val', type=str,
+    #                     help='Evaluation scheme [kruns_train+val | kfold_cv+test ]')
+    # parser.add_argument('--resume', default=None, type=str)
+    # parser.add_argument('--test_example', default=None, type=str)
 
     return parser.parse_args()
 
@@ -651,9 +665,9 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('\nUsing device:', device)
 
-    args.apex = True if args.apex == "y" else False
-
-    args.running_interactive = True if args.running_interactive == "y" else False
+    # args.apex = True if args.apex == "y" else False
+    #
+    # args.running_interactive = True if args.running_interactive == "y" else False
 
     torch.cuda.empty_cache()  # Clean up
 
@@ -664,18 +678,6 @@ def main(args):
             args.model_base_name = 'efficientnetb5'
         else:
             args.model_base_name = args.arch
-
-    args.n_class = 1  # Binary classification task
-
-    # Define class labels
-    if args.label.lower() == 'mass':
-        class0 = 'not_mass'
-        class1 = 'mass'
-    elif args.label.lower() == 'suspicious_calcification':
-        class0 = 'not_calcification'
-        class1 = 'calcification'
-
-    label_dict = {class0: 0, class1: 1}
 
     # Build model and load model checkpoint
     if args.clip_chk_pt_path is None or not os.path.exists(args.clip_chk_pt_path):
@@ -698,23 +700,34 @@ def main(args):
                 print(f"Download completed and saved to {filename}")
             else:
                 print(f"Failed to download the model. Status code: {response.status_code}")
-        # # extract the tar file
-        # with tarfile.open(filename, "r:tar") as tar:
-        #     tar.extractall(path=output_dir)
         print('model saved')
         args.clip_chk_pt_path = filename
 
-    global model
-    model = build_model(args)
-    print('model loaded')
+    # Calcification Model
+    global model_calc
+    vars(args).update(vars(args_calc))
+    model_calc = build_model(args)
     checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_calcifications.pth')
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
         gdown.download('https://drive.google.com/file/d/1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI/view?usp=sharing', checkpoint_path)
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-    model.load_state_dict(checkpoint['model'], strict=False)
-    model.is_training = False  # Set model mode for evaluation
-    model.eval()
+    model_calc.load_state_dict(checkpoint['model'], strict=False)
+    model_calc.is_training = False  # Set model mode for evaluation
+    model_calc.eval()
+
+    # Mass Model
+    global model_mass
+    vars(args).update(vars(args_calc))
+    model_mass = build_model(args)
+    checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_calcifications.pth')
+    if not os.path.exists(checkpoint_path):
+        os.makedirs('checkpoints/', exist_ok=True)
+        gdown.download('https://drive.google.com/file/d/1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI/view?usp=sharing', checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    model_mass.load_state_dict(checkpoint['model'], strict=False)
+    model_mass.is_training = False  # Set model mode for evaluation
+    model_mass.eval()
 
     ## Launch gradio demo
     # Build Gradio interface
@@ -723,18 +736,10 @@ def main(args):
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
-                classify_button = gr.Button("Run Classifier")
+                classify_button = gr.Button("Process Image")
             with gr.Column():
-                output_image = gr.Image(label="Output")
+                output_image = gr.Image(label="Findings")
                 output_label = gr.Label(label="Result")
-
-        # with gr.Row():
-        #     image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
-        #
-        # with gr.Row():
-        #     classify_button = gr.Button("Run Classifier")
-        #     output_label = gr.Label(label="Result")
-        #     output_image = gr.Image(label="Output")  # Add a new Image component to display
 
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_label, output_image])
     demo.launch()
@@ -768,27 +773,41 @@ def run_classifier(image):
         }
 
         # Process image
-        model.to(device)
-        output = model(x.unsqueeze(0).to(device))
-        bag_prob = torch.sigmoid(output)
+        x = x.unsqueeze(0).to(device)
+        model_calc.to(device)
+        output = model_calc(x)
+        model_calc.to('cpu')
+        prob_calc = torch.sigmoid(output).cpu().detach().squeeze().numpy()
+        model_mass.to(device)
+        output = model_mass(x)
+        model_mass.to('cpu')
+        prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
         # Visualize detected lesions
-        heatmaps, predicted_bboxes = visualize_detection(args, model, image, bag_coords, bag_info)
-
-        prob = bag_prob.cpu().detach().squeeze().numpy()
+        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, image, bag_coords, bag_info)
+        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, image, bag_coords, bag_info)
 
     # Draw bounding boxes
     image_with_boxes = Image.fromarray(image)
     draw = ImageDraw.Draw(image_with_boxes)
-    for box in predicted_bboxes:
+    for box in predicted_bboxes_calc:
         x1, y1, x2, y2, score = box
-        print(score)
         #Remove padding
         x1 -= padding[0]
         y1 -= padding[2]
         draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
         draw.text((x1, y1 - 15), "suspicious calc", fill="red")
-    return {"no_calcification": 1-prob, "has_calcification": prob}, image_with_boxes
+    for box in predicted_bboxes_mass:
+        x1, y1, x2, y2, score = box
+        #Remove padding
+        x1 -= padding[0]
+        y1 -= padding[2]
+        draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
+        draw.text((x1, y1 - 15), "mass", fill="red")
+    return ({"no_calcification": 1-prob_calc,
+            "has_calcification": prob_calc,
+            "no_mass": 1-prob_mass, "has_mass": prob_mass},
+            image_with_boxes)
 
 
 if __name__ == "__main__":
