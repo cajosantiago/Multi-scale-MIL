@@ -644,6 +644,9 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
 
         # Segment image to create segmentation mask, then pad it the same way as image
         seg_mask = Segment(img)
+        print(seg_mask)
+        plt.imshow(seg_mask)
+        plt.show()
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
         heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
@@ -689,8 +692,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                                                                max_bboxes=args.max_bboxes, min_area=args.min_area,
                                                                iou_threshold=args.iou_threshold)
 
-    # return aggregated_heatmap.cpu().numpy(), predicted_bboxes
-    return seg_mask.cpu().numpy(), predicted_bboxes
+    return aggregated_heatmap.cpu().numpy(), predicted_bboxes
 
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
@@ -806,7 +808,6 @@ def run_classifier(image):
             'step_size': args.patch_size - int(args.patch_size * args.overlap[0]),
             'img_height': height + padding[2] + padding[3], # padded image height
             'img_width': width + padding[0] + padding[1],
-            # 'img_dir': img_path
         }
 
         # Process image
@@ -825,8 +826,7 @@ def run_classifier(image):
         heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
 
     # Draw bounding boxes
-    # image_with_boxes = Image.fromarray(image)
-    image_with_boxes = Image.fromarray(heatmaps_calc)
+    image_with_boxes = Image.fromarray(image)
     draw = ImageDraw.Draw(image_with_boxes)
     if prob_calc>.4:
         for box in predicted_bboxes_calc:
