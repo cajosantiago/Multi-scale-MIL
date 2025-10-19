@@ -22,6 +22,7 @@ from scipy import ndimage
 from torchvision.ops import nms
 import math
 from argparse import Namespace
+import cv2
 
 args_mass = Namespace(
     mil_type='pyramidal_mil',
@@ -170,7 +171,7 @@ def config():
     parser.add_argument('--roi_attention_threshold', type=float, default=0.5)
     parser.add_argument('--visualize_num_images', default=0, type=int, help="")
     parser.add_argument('--quantile_threshold', default=0.95, type=float)
-    parser.add_argument('--max_bboxes', default=100, type=int)
+    parser.add_argument('--max_bboxes', default=5, type=int)
     parser.add_argument('--min_area', default=1024, type=int)
     parser.add_argument('--iou_threshold', default=0.25, type=float)
 
@@ -342,7 +343,6 @@ class Patching:
             patches = patches[sorted_indices]
 
         return patches, patch_coords, padding
-
 
 def pad_image(img_array, patch_size, overlap, mean, std):
     """
@@ -530,6 +530,33 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
     return bboxes
 
+def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True):
+    """
+    Perform tissue segmentation on an input image using median filtering, followed by binary thresholding (Otsu or fixed) and optional morphological operations
+    """
+
+    image = image.cpu().numpy()
+    image = (image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8)
+    image = cv2.cvtColor(image.transpose(1, 2, 0), cv2.COLOR_RGB2GRAY)
+
+    img_med = cv2.medianBlur(image, mthresh)  # Apply median blurring
+
+    # Thresholding
+    if use_otsu:
+        _, img_otsu = cv2.threshold(img_med, 0, sthresh_up, cv2.THRESH_OTSU + cv2.THRESH_BINARY)
+    else:
+        _, img_otsu = cv2.threshold(img_med, sthresh, sthresh_up, cv2.THRESH_BINARY)
+
+    # Morphological closing
+    if close > 0:
+        kernel = np.ones((close, close), np.uint8)
+        img_otsu = cv2.morphologyEx(img_otsu, cv2.MORPH_CLOSE, kernel)
+
+    # Convert back to float32 and normalize to [0, 1]
+    img_otsu = img_otsu.astype(np.float32) / 255.0
+
+    return torch.from_numpy(img_otsu)
+
 def visualize_detection(args, model, img, bag_coords, bag_info):
     img_h, img_w = bag_info['img_height'], bag_info['img_width']
 
@@ -615,11 +642,20 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         # Apply Gaussian smoothing
         heatmap = torch.from_numpy(gaussian_filter(heatmap, sigma=10))
 
+        # Segment image to create segmentation mask, then pad it the same way as image
+        seg_mask = Segment(img)
+
         # Normalize heatmap values only inside the segmentation mask, zero outside
-        # heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
-        #                       (heatmap - heatmap[seg_mask != 0].min()) / (
-        #                                   heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
-        #                       torch.tensor(0.0))
+        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+                              (heatmap - heatmap[seg_mask != 0].min()) / (
+                                      heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
+                              torch.tensor(0.0))
+
+        # Normalize heatmap values only inside the segmentation mask, zero outside
+        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+                              (heatmap - heatmap[seg_mask != 0].min()) / (
+                                          heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
+                              torch.tensor(0.0))
         heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
 
         # Extract bounding boxes from heatmap
@@ -783,8 +819,8 @@ def run_classifier(image):
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
         # Visualize detected lesions
-        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, image, bag_coords, bag_info)
-        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, image, bag_coords, bag_info)
+        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, x, bag_coords, bag_info)
+        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, x, bag_coords, bag_info)
 
     # Draw bounding boxes
     image_with_boxes = Image.fromarray(image)
