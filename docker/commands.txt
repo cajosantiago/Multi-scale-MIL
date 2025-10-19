@@ -20,3 +20,4 @@ cd Multi-scale-Attention-based-MIL
 sudo docker build -t mmourao/mmourao:latest ./docker/
 sudo docker run --rm --name mariana -it --gpus all mmourao/mmourao python run_inference.py
 sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all mmourao/mmourao bash
+apt-get update && apt-get install libgl1 libglib2.0-0

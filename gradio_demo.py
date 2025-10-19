@@ -537,6 +537,7 @@ def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True
 
     image = image.cpu().numpy()
     image = (image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8)
+    print(image.shape)
     image = cv2.cvtColor(image.transpose(1, 2, 0), cv2.COLOR_RGB2GRAY)
 
     img_med = cv2.medianBlur(image, mthresh)  # Apply median blurring
