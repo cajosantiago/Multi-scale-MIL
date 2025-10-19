@@ -537,7 +537,6 @@ def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True
 
     image = image.cpu().numpy()
     image = (image * 255).astype(np.uint8) if image.max() <= 1.0 else image.astype(np.uint8)
-    print(image.shape)
     image = cv2.cvtColor(image.transpose(1, 2, 0), cv2.COLOR_RGB2GRAY)
 
     img_med = cv2.medianBlur(image, mthresh)  # Apply median blurring
@@ -690,7 +689,8 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
                                                                max_bboxes=args.max_bboxes, min_area=args.min_area,
                                                                iou_threshold=args.iou_threshold)
 
-    return aggregated_heatmap.cpu().numpy(), predicted_bboxes
+    # return aggregated_heatmap.cpu().numpy(), predicted_bboxes
+    return seg_mask.cpu().numpy(), predicted_bboxes
 
 def main(args):
     # seed_all(args.seed)  # Fix the seed for reproducibility
@@ -825,7 +825,8 @@ def run_classifier(image):
         heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
 
     # Draw bounding boxes
-    image_with_boxes = Image.fromarray(image)
+    # image_with_boxes = Image.fromarray(image)
+    image_with_boxes = Image.fromarray(heatmaps_calc)
     draw = ImageDraw.Draw(image_with_boxes)
     if prob_calc>.4:
         for box in predicted_bboxes_calc:
