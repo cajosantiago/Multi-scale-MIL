@@ -647,7 +647,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         seg_mask = Segment(img)
         print(seg_mask)
         plt.imshow(seg_mask)
-        plt.show()
+        plt.savefig('test.png')
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
         heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
