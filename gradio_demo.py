@@ -23,6 +23,7 @@ from torchvision.ops import nms
 import math
 from argparse import Namespace
 import cv2
+import matplotlib.pyplot as plt
 
 args_mass = Namespace(
     mil_type='pyramidal_mil',
