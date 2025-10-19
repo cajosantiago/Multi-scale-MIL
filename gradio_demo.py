@@ -790,15 +790,16 @@ def run_classifier(image):
     with torch.no_grad():
         tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                               torchvision.transforms.Normalize(mean=args.mean, std=args.std),
-                                              lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std),
-                                              Patching(
-                                                  patch_size=args.patch_size,
-                                                  overlap=args.overlap,
-                                                  multi_scale_model=args.multi_scale_model,
-                                                  scales=args.scales
-                                              )
+                                              lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std)
                                               ])
-        x, bag_coords, padding = tfm(image) #(padding_left, padding_right, padding_top, padding_bottom)
+        padded_image = tfm(image)
+        patching_transform = Patching(
+                                  patch_size=args.patch_size,
+                                  overlap=args.overlap,
+                                  multi_scale_model=args.multi_scale_model,
+                                  scales=args.scales
+                              )
+        x, bag_coords, padding = patching_transform(padded_image) #(padding_left, padding_right, padding_top, padding_bottom)
         width, height = image.shape[1], image.shape[0]
         bag_info = {
             'patch_size': args.patch_size,
@@ -820,8 +821,8 @@ def run_classifier(image):
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
         # Visualize detected lesions
-        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, x, bag_coords, bag_info)
-        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, x, bag_coords, bag_info)
+        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image, bag_coords, bag_info)
+        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image, bag_coords, bag_info)
 
     # Draw bounding boxes
     image_with_boxes = Image.fromarray(image)
