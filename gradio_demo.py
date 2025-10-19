@@ -553,6 +553,9 @@ def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True
         kernel = np.ones((close, close), np.uint8)
         img_otsu = cv2.morphologyEx(img_otsu, cv2.MORPH_CLOSE, kernel)
 
+    # Invert mask
+    img_otsu = cv2.bitwise_not(img_otsu)
+
     # Convert back to float32 and normalize to [0, 1]
     img_otsu = img_otsu.astype(np.float32) / 255.0
 
