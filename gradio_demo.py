@@ -821,8 +821,8 @@ def run_classifier(image):
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
         # Visualize detected lesions
-        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image, bag_coords, bag_info)
-        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image, bag_coords, bag_info)
+        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image[0], bag_coords, bag_info)
+        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
 
     # Draw bounding boxes
     image_with_boxes = Image.fromarray(image)
