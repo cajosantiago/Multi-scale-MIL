@@ -6,3 +6,4 @@ scikit-learn
 gdown
 omegaconf
 gradio
+opencv-python
