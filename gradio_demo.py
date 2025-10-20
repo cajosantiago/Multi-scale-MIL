@@ -26,14 +26,11 @@ import cv2
 import matplotlib.pyplot as plt
 
 args_mass = Namespace(
-    mil_type='pyramidal_mil',
     pooling_type='gated-attention',
     type_mil_encoder='mlp'
 )
 args_calc = Namespace(
-    mil_type='pyramidal_mil',
     pooling_type='pma',
-    trans_layer_norm=True,
     type_mil_encoder='isab'
 )
 
@@ -648,20 +645,11 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
 
         # Segment image to create segmentation mask, then pad it the same way as image
         seg_mask = Segment(img)
-        print(seg_mask)
-        plt.imshow(seg_mask)
-        plt.savefig('test.png')
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
         heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
                               (heatmap - heatmap[seg_mask != 0].min()) / (
                                       heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
-                              torch.tensor(0.0))
-
-        # Normalize heatmap values only inside the segmentation mask, zero outside
-        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
-                              (heatmap - heatmap[seg_mask != 0].min()) / (
-                                          heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
                               torch.tensor(0.0))
         heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
 
@@ -744,7 +732,7 @@ def main(args):
         print('model saved')
         args.clip_chk_pt_path = filename
 
-    # Calcification Model
+    # Calcification Model: Aggregated Results --> Test F1-Score: 0.9100 | Test Bacc: 0.8997 | Test ROC-AUC: 0.9569
     global model_calc
     vars(args).update(vars(args_calc))
     model_calc = build_model(args)
@@ -757,7 +745,7 @@ def main(args):
     model_calc.is_training = False  # Set model mode for evaluation
     model_calc.eval()
 
-    # Mass Model
+    # Mass Model: Aggregated Results --> Test F1-Score: 0.7470 | Test Bacc: 0.7350 | Test ROC-AUC: 0.8143
     global model_mass
     vars(args).update(vars(args_calc))
     model_mass = build_model(args)
@@ -826,30 +814,29 @@ def run_classifier(image):
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
         # Visualize detected lesions
-        heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image[0], bag_coords, bag_info)
-        heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
-
-    # Draw bounding boxes
-    image_with_boxes = Image.fromarray(image)
-    draw = ImageDraw.Draw(image_with_boxes)
-    if prob_calc>.4:
-        for box in predicted_bboxes_calc:
-            x1, y1, x2, y2, score = box
-            print(score)
-            #Remove padding
-            x1 -= padding[0]
-            y1 -= padding[2]
-            draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-            draw.text((x1, y1 - 15), "suspicious calc", fill="red")
-    if prob_mass>.4:
-        for box in predicted_bboxes_mass:
-            x1, y1, x2, y2, score = box
-            print(score)
-            #Remove padding
-            x1 -= padding[0]
-            y1 -= padding[2]
-            draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-            draw.text((x1, y1 - 15), "mass", fill="red")
+        # Draw bounding boxes
+        image_with_boxes = Image.fromarray(image)
+        draw = ImageDraw.Draw(image_with_boxes)
+        if prob_calc>.5:
+            heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image[0], bag_coords, bag_info)
+            for box in predicted_bboxes_calc:
+                x1, y1, x2, y2, score = box
+                print(score)
+                #Remove padding
+                x1 -= padding[0]
+                y1 -= padding[2]
+                draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
+                draw.text((x1, y1 - 15), "suspicious calc", fill="red")
+        if prob_mass>.5:
+            heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
+            for box in predicted_bboxes_mass:
+                x1, y1, x2, y2, score = box
+                print(score)
+                #Remove padding
+                x1 -= padding[0]
+                y1 -= padding[2]
+                draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
+                draw.text((x1, y1 - 15), "mass", fill="red")
     return ({"No": 1-prob_calc,
             "Yes": prob_calc},
             {"No": 1-prob_mass,
