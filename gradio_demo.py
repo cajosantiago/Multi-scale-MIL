@@ -23,7 +23,6 @@ from torchvision.ops import nms
 import math
 from argparse import Namespace
 import cv2
-import matplotlib.pyplot as plt
 
 args_mass = Namespace(
     pooling_type='gated-attention',
@@ -772,7 +771,7 @@ def main(args):
                 output_mass_label = gr.Label(label="Masses")
 
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
-    demo.launch()
+    demo.launch(share=True)
 
 
 # This function is called when the button is pressed
