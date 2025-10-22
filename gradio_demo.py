@@ -121,7 +121,7 @@ def config():
     parser.add_argument('--upsample_method', type=str, choices=['bilinear', 'nearest'], default='nearest')
     parser.add_argument('--norm_fpn', type=bool, default=False)
 
-    parser.add_argument('--deep_supervision', action='store_true', default=False)
+    parser.add_argument('--deep_supervision', action='store_true', default=True)
     parser.add_argument('--type_scale_aggregator', type=str,
                         choices=['concatenation', 'max_p', 'mean_p', 'attention', 'gated-attention'], default='gated-attention')
 
@@ -430,7 +430,7 @@ class lambda_funct(torchvision.transforms.Lambda):
     def __call__(self, img):
         return self.lambd(img, self.patch_size, self.overlap, self.mean, self.std)
 
-def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bboxes=3, min_area=230,
+def extract_bounding_boxes_from_heatmap(heatmap, bag_prob, quantile_threshold=0.98, max_bboxes=3, min_area=230,
                                         iou_threshold=0.5):
     """
     Extract bounding boxes from a heatmap by thresholding high-attention regions on a given heatmap.
@@ -478,7 +478,8 @@ def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bb
 
             b = [slice_y.start, slice_x.start, slice_y.stop, slice_x.stop]
             # score = get_cumlative_attention(heatmap, b)
-            score = heatmap[b[1]:b[3], b[0]:b[2]].sum()
+            # score = heatmap[b[1]:b[3], b[0]:b[2]].sum()
+            score = heatmap[b[1]:b[3], b[0]:b[2]].mean()
 
             bboxes.append([slice_y.start, slice_x.start, slice_y.stop, slice_x.stop, score])
 
@@ -548,9 +549,6 @@ def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True
     if close > 0:
         kernel = np.ones((close, close), np.uint8)
         img_otsu = cv2.morphologyEx(img_otsu, cv2.MORPH_CLOSE, kernel)
-
-    # Invert mask
-    img_otsu = cv2.bitwise_not(img_otsu)
 
     # Convert back to float32 and normalize to [0, 1]
     img_otsu = img_otsu.astype(np.float32) / 255.0
@@ -653,7 +651,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
 
         # Extract bounding boxes from heatmap
-        predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap,
+        predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap, bag_prob,
                                                                quantile_threshold=args.quantile_threshold,
                                                                max_bboxes=args.max_bboxes,
                                                                min_area=args.min_area,
@@ -746,7 +744,7 @@ def main(args):
 
     # Mass Model: Aggregated Results --> Test F1-Score: 0.7470 | Test Bacc: 0.7350 | Test ROC-AUC: 0.8143
     global model_mass
-    vars(args).update(vars(args_calc))
+    vars(args).update(vars(args_mass))
     model_mass = build_model(args)
     checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_mass.pth')
     if not os.path.exists(checkpoint_path):
@@ -767,8 +765,8 @@ def main(args):
                 classify_button = gr.Button("Process Image")
             with gr.Column():
                 output_image = gr.Image(label="Findings")
-                output_calc_label = gr.Label(label="Calcifications")
-                output_mass_label = gr.Label(label="Masses")
+                output_calc_label = gr.Label(label="Found Suspicious Calcifications")
+                output_mass_label = gr.Label(label="Found Masses")
 
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
     demo.launch(share=True)
@@ -785,6 +783,8 @@ def run_classifier(image):
                                               torchvision.transforms.Normalize(mean=args.mean, std=args.std),
                                               lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std)
                                               ])
+        reverse_normalize = transforms.Normalize((-args.mean / args.std, -args.mean / args.std, -args.mean / args.std),
+                                 (1.0 / args.std, 1.0 / args.std, 1.0 / args.std))
         padded_image = tfm(image)
         patching_transform = Patching(
                                   patch_size=args.patch_size,
@@ -804,11 +804,11 @@ def run_classifier(image):
         # Process image
         x = x.unsqueeze(0).to(device)
         model_calc.to(device)
-        output = model_calc(x)
+        output, _ = model_calc(x)
         model_calc.to('cpu')
         prob_calc = torch.sigmoid(output).cpu().detach().squeeze().numpy()
         model_mass.to(device)
-        output = model_mass(x)
+        output, _ = model_mass(x)
         model_mass.to('cpu')
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
@@ -817,25 +817,29 @@ def run_classifier(image):
         image_with_boxes = Image.fromarray(image)
         draw = ImageDraw.Draw(image_with_boxes)
         if prob_calc>.5:
-            heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, padded_image[0], bag_coords, bag_info)
+            heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, reverse_normalize(padded_image[0]), bag_coords, bag_info)
             for box in predicted_bboxes_calc:
                 x1, y1, x2, y2, score = box
                 print(score)
                 #Remove padding
                 x1 -= padding[0]
                 y1 -= padding[2]
+                x2 -= padding[0]
+                y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-                draw.text((x1, y1 - 15), "suspicious calc", fill="red")
+                draw.text((x1, y1 - 15), f"Suspicious calc ({100*score:.1}%)", fill="red")
         if prob_mass>.5:
-            heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, padded_image[0], bag_coords, bag_info)
+            heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, reverse_normalize(padded_image[0]), bag_coords, bag_info)
             for box in predicted_bboxes_mass:
                 x1, y1, x2, y2, score = box
                 print(score)
                 #Remove padding
                 x1 -= padding[0]
                 y1 -= padding[2]
+                x2 -= padding[0]
+                y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-                draw.text((x1, y1 - 15), "mass", fill="red")
+                draw.text((x1, y1 - 15), f"Mass ({100*score:.1}%)", fill="red")
     return ({"No": 1-prob_calc,
             "Yes": prob_calc},
             {"No": 1-prob_mass,
