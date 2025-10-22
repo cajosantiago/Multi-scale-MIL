@@ -430,7 +430,7 @@ class lambda_funct(torchvision.transforms.Lambda):
     def __call__(self, img):
         return self.lambd(img, self.patch_size, self.overlap, self.mean, self.std)
 
-def extract_bounding_boxes_from_heatmap(heatmap, bag_prob, quantile_threshold=0.98, max_bboxes=3, min_area=230,
+def extract_bounding_boxes_from_heatmap(heatmap, quantile_threshold=0.98, max_bboxes=3, min_area=230,
                                         iou_threshold=0.5):
     """
     Extract bounding boxes from a heatmap by thresholding high-attention regions on a given heatmap.
@@ -651,7 +651,7 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
 
         # Extract bounding boxes from heatmap
-        predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap, bag_prob,
+        predicted_bboxes = extract_bounding_boxes_from_heatmap(heatmap,
                                                                quantile_threshold=args.quantile_threshold,
                                                                max_bboxes=args.max_bboxes,
                                                                min_area=args.min_area,
