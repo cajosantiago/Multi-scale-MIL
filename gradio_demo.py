@@ -827,7 +827,7 @@ def run_classifier(image):
                 x2 -= padding[0]
                 y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-                draw.text((x1, y1 - 15), f"Suspicious calc ({100*score:.1}%)", fill="red")
+                draw.text((x1, y1 - 15), f"Suspicious calc ({score:.1%})", fill="red")
         if prob_mass>.5:
             heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, reverse_normalize(padded_image[0]), bag_coords, bag_info)
             for box in predicted_bboxes_mass:
@@ -839,7 +839,7 @@ def run_classifier(image):
                 x2 -= padding[0]
                 y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-                draw.text((x1, y1 - 15), f"Mass ({100*score:.1}%)", fill="red")
+                draw.text((x1, y1 - 15), f"Mass ({score:.1%}%)", fill="red")
     return ({"No": 1-prob_calc,
             "Yes": prob_calc},
             {"No": 1-prob_mass,
