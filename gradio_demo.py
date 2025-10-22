@@ -783,7 +783,7 @@ def run_classifier(image):
                                               torchvision.transforms.Normalize(mean=args.mean, std=args.std),
                                               lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std)
                                               ])
-        reverse_normalize = transforms.Normalize((-args.mean / args.std, -args.mean / args.std, -args.mean / args.std),
+        reverse_normalize = torchvision.transforms.Normalize((-args.mean / args.std, -args.mean / args.std, -args.mean / args.std),
                                  (1.0 / args.std, 1.0 / args.std, 1.0 / args.std))
         padded_image = tfm(image)
         patching_transform = Patching(
