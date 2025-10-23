@@ -779,7 +779,7 @@ def run_classifier(image):
     # Save image
     os.makedirs('saved_images', exist_ok=True)
     filename = os.path.join('saved_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
-    Image.fromarray(img).save(filename, format="PNG")
+    Image.fromarray(image).save(filename, format="PNG")
 
     # Load and preprocess image
     with torch.no_grad():
