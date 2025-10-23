@@ -778,6 +778,9 @@ def run_classifier(image):
     if image is None:
         return "No image uploaded"
 
+    # Save image
+    print(image)
+
     # Load and preprocess image
     with torch.no_grad():
         tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
