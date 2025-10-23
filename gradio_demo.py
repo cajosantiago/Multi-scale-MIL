@@ -778,7 +778,7 @@ def run_classifier(image):
 
     # Save image
     os.makedirs('saved_images', exist_ok=True)
-    filename = os.path.join('saved_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+    filename = os.path.join('uploaded_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
     Image.fromarray(image).save(filename, format="PNG")
 
     # Load and preprocess image
