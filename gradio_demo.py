@@ -767,7 +767,7 @@ def main(args):
                 output_mass_label = gr.Label(label="Found Masses")
 
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
-    demo.launch(share=True)
+    demo.launch()#share=True)
 
 
 # This function is called when the button is pressed
