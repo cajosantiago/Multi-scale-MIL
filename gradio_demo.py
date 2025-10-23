@@ -555,7 +555,7 @@ def Segment(image, sthresh=20, sthresh_up=255, mthresh=7, close=4, use_otsu=True
 
     return torch.from_numpy(img_otsu)
 
-def visualize_detection(args, model, img, bag_coords, bag_info):
+def visualize_detection(args, model, seg_mask, bag_coords, bag_info):
     img_h, img_w = bag_info['img_height'], bag_info['img_width']
 
     # Get instance-level attention scores for all scales from the model
@@ -639,9 +639,6 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
 
         # Apply Gaussian smoothing
         heatmap = torch.from_numpy(gaussian_filter(heatmap, sigma=10))
-
-        # Segment image to create segmentation mask, then pad it the same way as image
-        seg_mask = Segment(img).to(torch.bool)
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
         # heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
@@ -816,12 +813,18 @@ def run_classifier(image):
         model_mass.to('cpu')
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
+        # Segment image to create segmentation mask
+        seg_mask = Segment(reverse_normalize(padded_image[0])).to(torch.bool)
+        print(any(seg_mask))
+        if not any(seg_mask):
+            seg_mask = not seg_mask
+
         # Visualize detected lesions
         # Draw bounding boxes
         image_with_boxes = Image.fromarray(image)
         draw = ImageDraw.Draw(image_with_boxes)
         if prob_calc>.5:
-            heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, reverse_normalize(padded_image[0]), bag_coords, bag_info)
+            heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, seg_mask, bag_coords, bag_info)
             for box in predicted_bboxes_calc:
                 x1, y1, x2, y2, score = box
                 print(score)
@@ -833,7 +836,7 @@ def run_classifier(image):
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
                 draw.text((x1, y1 - 15), f"Suspicious calc ({score:.1%})", fill="red")
         if prob_mass>.5:
-            heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, reverse_normalize(padded_image[0]), bag_coords, bag_info)
+            heatmaps_mass, predicted_bboxes_mass = visualize_detection(args, model_mass, seg_mask, bag_coords, bag_info)
             for box in predicted_bboxes_mass:
                 x1, y1, x2, y2, score = box
                 print(score)
