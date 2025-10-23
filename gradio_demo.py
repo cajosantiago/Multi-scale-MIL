@@ -23,6 +23,7 @@ from torchvision.ops import nms
 import math
 from argparse import Namespace
 import cv2
+from datetime import datetime
 
 args_mass = Namespace(
     pooling_type='gated-attention',
@@ -776,7 +777,9 @@ def run_classifier(image):
         return "No image uploaded"
 
     # Save image
-    print(image)
+    os.makedirs('saved_images', exist_ok=True)
+    filename = os.path.join('saved_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+    Image.fromarray(img).save(filename, format="PNG")
 
     # Load and preprocess image
     with torch.no_grad():
@@ -815,9 +818,9 @@ def run_classifier(image):
 
         # Segment image to create segmentation mask
         seg_mask = Segment(reverse_normalize(padded_image[0])).to(torch.bool)
-        print(any(seg_mask))
-        if not any(seg_mask):
-            seg_mask = not seg_mask
+        if not seg_mask.any():
+            print('Switched segmentation mask')
+            seg_mask = torch.ones_like(seg_mask, dtype=torch.bool)
 
         # Visualize detected lesions
         # Draw bounding boxes
