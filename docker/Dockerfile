@@ -3,7 +3,7 @@
 FROM pytorch/pytorch:2.8.0-cuda12.9-cudnn9-runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-	git wget && \
+	git wget libgl1 libglib2.0-0 && \
 	git clone https://github.com/cajosantiago/Multi-scale-MIL.git /home && \
     cd /home && \
     pip install -r docker/requirements.txt && \
