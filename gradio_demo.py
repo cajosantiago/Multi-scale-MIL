@@ -641,10 +641,11 @@ def visualize_detection(args, model, img, bag_coords, bag_info):
         heatmap = torch.from_numpy(gaussian_filter(heatmap, sigma=10))
 
         # Segment image to create segmentation mask, then pad it the same way as image
-        seg_mask = Segment(img)
+        seg_mask = Segment(img).to(torch.bool)
 
         # Normalize heatmap values only inside the segmentation mask, zero outside
-        heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+        # heatmap = torch.where(torch.tensor(seg_mask, dtype=torch.bool),
+        heatmap=torch.where(seg_mask,
                               (heatmap - heatmap[seg_mask != 0].min()) / (
                                       heatmap[seg_mask != 0].max() - heatmap[seg_mask != 0].min()),
                               torch.tensor(0.0))
@@ -839,7 +840,7 @@ def run_classifier(image):
                 x2 -= padding[0]
                 y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
-                draw.text((x1, y1 - 15), f"Mass ({score:.1%}%)", fill="red")
+                draw.text((x1, y1 - 15), f"Mass ({score:.1%})", fill="red")
     return ({"No": 1-prob_calc,
             "Yes": prob_calc},
             {"No": 1-prob_mass,
