@@ -777,7 +777,7 @@ def run_classifier(image):
         return "No image uploaded"
 
     # Save image
-    os.makedirs('saved_images', exist_ok=True)
+    os.makedirs('uploaded_images', exist_ok=True)
     filename = os.path.join('uploaded_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
     Image.fromarray(image).save(filename, format="PNG")
 
