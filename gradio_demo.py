@@ -169,7 +169,7 @@ def config():
     parser.add_argument('--roi_attention_threshold', type=float, default=0.5)
     parser.add_argument('--visualize_num_images', default=0, type=int, help="")
     parser.add_argument('--quantile_threshold', default=0.95, type=float)
-    parser.add_argument('--max_bboxes', default=5, type=int)
+    parser.add_argument('--max_bboxes', default=3, type=int)
     parser.add_argument('--min_area', default=1024, type=int)
     parser.add_argument('--iou_threshold', default=0.25, type=float)
 
@@ -770,15 +770,29 @@ def main(args):
         classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
     demo.launch()#share=True)
 
+def load_dicom_image(file):
+    """Read DICOM and return as normalized NumPy array."""
+    ds = pydicom.dcmread(file.name)
+    img = ds.pixel_array.astype(float)
+    img = (np.maximum(img, 0) / img.max()) * 255.0
+    return img.astype(np.uint8)
+
+def preprocess_image(image_or_dict):
+    if isinstance(image_or_dict, str) and image_or_dict.endswith(".dcm"):
+        # Direct path to DICOM file
+        return load_dicom_image(open(image_or_dict, "rb"))
+    elif isinstance(image_or_dict, np.ndarray):
+        return image_or_dict
+    else:
+        raise ValueError("Unsupported input type.")
 
 # This function is called when the button is pressed
 def run_classifier(image):
-    if image is None:
-        return "No image uploaded"
+    image = preprocess_image(image_input)
 
     # Save image
     os.makedirs('uploaded_images', exist_ok=True)
-    filename = os.path.join('uploaded_images', 'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+    filename = os.path.join('uploaded_images', f'image_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
     Image.fromarray(image).save(filename, format="PNG")
 
     # Load and preprocess image

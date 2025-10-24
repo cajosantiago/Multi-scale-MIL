@@ -20,6 +20,6 @@ cd Multi-scale-Attention-based-MIL
 sudo docker build -t mmourao/mmourao:latest ./docker/
 sudo docker run --rm --name mariana -it --gpus all mmourao/mmourao python run_inference.py
 sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all mmourao/mmourao bash
-sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all mmourao/mmourao bash
+sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all -v /mnt/d/code/Multi-scale-MIL/:/home/ mmourao/mmourao bash
 sudo docker run -d --gpus all --shm-size=16gb -p 7860:7860 -v /mnt/d/code/Multi-scale-MIL/:/home/ --name breast mourao/mourao python gradio_demo.py
-apt-get update && apt-get install libgl1 libglib2.0-0
+screen -dmS gradio -L -Logfile log_dockers/gradio.txt cloudflared tunnel --url localhost:7860
