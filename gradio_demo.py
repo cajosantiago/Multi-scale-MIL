@@ -33,6 +33,13 @@ args_calc = Namespace(
     pooling_type='pma',
     type_mil_encoder='isab'
 )
+args_density = Namespace(
+    pooling_type='gated-attention',
+    type_mil_encoder='mlp',
+    multi_view = True,
+    n_class = 4,
+    label = 'breast_density'
+    )
 
 def config():
     parser = argparse.ArgumentParser()
@@ -55,7 +62,7 @@ def config():
     parser.add_argument("--img-size", nargs='+', default=[1520, 912])
     parser.add_argument("--dataset", default="ViNDr", type=str, help="Dataset name.")
     parser.add_argument("--data_frac", default=1.0, type=float, help="Fraction of data to be used for training")
-    parser.add_argument("--label", default="Suspicious_Calcification", type=str, help="Mass or Suspicious_Calcification")
+    parser.add_argument("--label", default="Suspicious_Calcification", type=str, help="Mass or Suspicious_Calcification or brest_birads or breast_density")
     parser.add_argument("--num-classes", default=1, type=int)
     parser.add_argument("--n_class", default=1, type=int)
     parser.add_argument("--n_runs", default=1, type=int)
@@ -84,6 +91,7 @@ def config():
     parser.add_argument('--source_image', type=str, default='patches', choices=['patches', 'full_image'])
     parser.add_argument('--patch_size', type=int, default=512)
     parser.add_argument('--overlap', type=float, nargs='*', default=[0.75])
+    parser.add_argument('--multi_view', default = False, help = 'Wether to use multiple views per exam (default: False)')
 
     # MIL model parameters
     parser.add_argument('--mil_type', default='pyramidal_mil', choices=[None, 'instance', 'embedding', 'pyramidal_mil'], type=str,

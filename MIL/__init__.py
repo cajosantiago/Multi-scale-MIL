@@ -3,9 +3,14 @@ import math
 
 # internal imports 
 from FeatureExtractors import Define_Feature_Extractor, FeaturePyramidNetwork
-from .MILmodels import EmbeddingMIL, PyramidalMILmodel, NestedPyramidalMILmodel
 
 def build_model(args): 
+
+    if args.n_class < 2:
+        from .MILmodels import EmbeddingMIL, PyramidalMILmodel, NestedPyramidalMILmodel
+    else:
+        from .MILmodels_MC import EmbeddingMIL, PyramidalMILmodel, NestedPyramidalMILmodel
+
 
     ############################ Define the Feature Extractor ############################
     if args.feature_extraction == 'online': 
