@@ -23,3 +23,5 @@ sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all mmourao/mmourao 
 sudo docker run --rm --name mariana -it -p 7860:7860 --gpus all -v /mnt/d/code/Multi-scale-MIL/:/home/ mmourao/mmourao bash
 sudo docker run -d --gpus all --shm-size=16gb -p 7860:7860 -v /mnt/d/code/Multi-scale-MIL/:/home/ --name breast mourao/mourao python gradio_demo.py
 screen -dmS gradio -L -Logfile log_dockers/gradio.txt cloudflared tunnel --url localhost:7860
+
+netsh interface portproxy add v4tov4 listenport=7860 listenaddress=0.0.0.0 connectport=7860 connectaddress=172.23.207.107
