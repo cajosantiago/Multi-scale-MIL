@@ -6,7 +6,7 @@ from FeatureExtractors import Define_Feature_Extractor, FeaturePyramidNetwork
 
 def build_model(args): 
 
-    if args.n_class < 2:
+    if args.num_classes < 2:
         from .MILmodels import EmbeddingMIL, PyramidalMILmodel, NestedPyramidalMILmodel
     else:
         from .MILmodels_MC import EmbeddingMIL, PyramidalMILmodel, NestedPyramidalMILmodel
@@ -41,7 +41,7 @@ def build_model(args):
                     inst_encoder=feature_extractor,
                     embedding_size=num_chs,
                     sigmoid_func = False, 
-                    num_classes=args.n_class,
+                    num_classes=args.num_classes,
                     drop_classhead=args.drop_classhead,
                     map_prob_func = args.map_prob_func,
                     # MIL Encoder args

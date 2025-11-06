@@ -839,7 +839,7 @@ def run_roi_eval(directory, args, device):
         else:
             args.model_base_name = args.arch
 
-    args.n_class = 1
+    args.num_classes = 1
 
     # Task specificities
     if args.label.lower() == 'mass':

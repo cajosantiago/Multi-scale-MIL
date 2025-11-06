@@ -55,7 +55,7 @@ def config():
     parser.add_argument("--arch", default="upmc_breast_clip_det_b5_period_n_ft", type=str,
         help="For b5 classification, [upmc_breast_clip_det_b5_period_n_lp for linear probe and  upmc_breast_clip_det_b5_period_n_ft for finetuning]. "
              "For b2 classification, [upmc_breast_clip_det_b2_period_n_lp for linear probe and  upmc_breast_clip_det_b2_period_n_ft for finetuning].", help="Model architecture name")
-    parser.add_argument("--swin_encoder", default="microsoft/swin-tiny-patch4-window7-224", type=str, help="Swin Transformer model identifier"))
+    parser.add_argument("--swin_encoder", default="microsoft/swin-tiny-patch4-window7-224", type=str, help="Swin Transformer model identifier")
     parser.add_argument("--pretrained_swin_encoder", default="y", type=str, help="Whether Swin encoder is pretrained (y/n)")
     parser.add_argument("--swin_model_type", default="y", type=str)
     
@@ -95,7 +95,7 @@ def main(args):
     else:
         args.model_base_name = args.arch
 
-    args.n_class = 1
+    args.num_classes = 1
 
     # ------ Load Dataset ------
     args.data_dir = Path(args.data_dir)

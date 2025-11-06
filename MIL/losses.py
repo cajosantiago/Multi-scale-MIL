@@ -14,11 +14,11 @@ class DistAndClassWeightedCE(torch.nn.Module):
         super(DistAndClassWeightedCE, self).__init__()
         
         # Matrice de poids de distance (sans normalisation)
-        self.register_buffer('W', torch.zeros((num_classes, num_classes)))
+        self.register_buffer('W', torch.zeros((num_classes, n_class)))
         for i in range(num_classes):
             for j in range(num_classes):
                 self.W[i, j] = f(abs(i - j))/num_classes
-        
+
         # Poids de classe
         self.register_buffer('class_weights', torch.tensor(class_weights, dtype=torch.float32))
         

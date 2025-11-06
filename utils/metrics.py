@@ -12,8 +12,8 @@ def compute_AUC(gt, pred):
     """Computes Area Under the Curve (AUC) from prediction scores.
 
     Args:
-        gt: true binary labels (shape = [n_samples, n_classes])
-        pred: probability estimates of the positive class (shape = [n_samples, n_classes])
+        gt: true binary labels (shape = [n_samples, num_classeses])
+        pred: probability estimates of the positive class (shape = [n_samples, num_classeses])
 
     Returns:
         List of AUROCs, AUPRCs of all classes.

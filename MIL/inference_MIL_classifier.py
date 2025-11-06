@@ -22,7 +22,7 @@ def run_eval(run_path, args, device):
         else:
             args.model_base_name = args.arch
         
-    args.n_class = 1 # Binary classification task
+    args.num_classes = 1 # Binary classification task
 
     # Define class labels 
     if args.label.lower() == 'mass':

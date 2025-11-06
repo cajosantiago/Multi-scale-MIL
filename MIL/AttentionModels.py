@@ -138,7 +138,7 @@ class Attn_Net(nn.Module):
     L: input feature dimension
     D: hidden layer dimension
     dropout: whether to use dropout (p = 0.25)
-    n_classes: number of classes 
+    num_classes: number of classes
     """
 
     def __init__(self, L = 512, D = 256, dropout = 0.0, map_prob_func = 'softmax'):

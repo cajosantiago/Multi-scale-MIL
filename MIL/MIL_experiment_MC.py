@@ -12,36 +12,45 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 # internal imports 
-from Datasets.dataset_utils import MIL_dataloader
-from MIL import build_model 
+from Datasets.dataset_utils_MC import MIL_dataloader
+from MIL import build_model
+from MIL.losses import DistanceWeightedCrossEntropyLoss, DistAndClassWeightedCE, TotalLoss
 
-from utils.metrics import auroc, evaluate_metrics
+from utils.metrics_MT import auroc, evaluate_metrics
 from utils.generic_utils import seed_all, AverageMeter, timeSince, print_network, clear_memory 
 from utils.training_setup_utils import initialize_training_setup, Training_Stage_Config
-from utils.plot_utils import plot_loss_and_acc_curves, plot_lrs_scheduler, plot_confusion_matrix, ROC_curves
+from utils.plot_utils_MC import plot_loss_and_acc_curves, plot_lrs_scheduler, plot_confusion_matrix, ROC_curves_multiclass
 from utils.data_split_utils import generator_cross_val_folds, stratified_train_val_split
 
-def do_experiments(args, device):
-        
-    args.num_classes = 1 # Binary classification setup (single output neuron)
-        
-    # Define class labels based on selected task
-    if args.label.lower() == 'mass':
-        class0 = 'not_mass'
-        class1 = 'mass'
-    elif args.label.lower() == 'suspicious_calcification':
-        class0 = 'not_calcification'
-        class1 = 'calcification'   
+from geomloss import SamplesLoss
 
-    label_dict = {class0: 0, class1: 1}
+def do_experiments(args, device):
+                
+    # Define class labels based on selected task
+    if args.label.lower() == 'breast_density':
+        densityA = 'DENSITY A'
+        densityB = 'DENSITY B'
+        densityC = 'DENSITY C'
+        densityD = 'DENSITY D'
+        label_dict = {densityA: 0, densityB: 1, densityC: 2, densityD: 3}
+        args.num_classes = 4
+    elif args.label.lower() == 'breast_birads':
+        birads1 = 'BI-RADS 1'
+        birads2 = 'BI-RADS 2'
+        birads3 = 'BI-RADS 3'
+        birads4 = 'BI-RADS 4'
+        birads5 = 'BI-RADS 5'
+        label_dict = {birads1: 0, birads2: 1, birads3: 2, birads4: 3, birads5: 4}
+        args.num_classes = 5
 
     ############################ Data Setup ############################
     args.data_dir = Path(args.data_dir)
     
     args.df = pd.read_csv(args.data_dir / args.csv_file)
     args.df = args.df.fillna(0)
+    args.df['label_num'] = args.df[args.label].map(label_dict)
     
-    print(f"df shape: {args.df.shape}")
+    print(f"df shape: {args.df.shape}") # printed
     print(args.df.columns)
 
     # Split data into dev (train+val) and test sets
@@ -84,7 +93,7 @@ def do_experiments(args, device):
 
         # perform multiple runs (kruns) of training and testing
         for idx_run in range(args.n_runs):
-            print(f'\n================== run nº: {idx_run} ======================')
+            print(f'\n================== run nº: {idx_run} ======================') # does not print
             args.cur_fold = idx_run  
 
             # set seed for reproducibility
@@ -104,8 +113,32 @@ def do_experiments(args, device):
             fold_model.to(device)
 
             # evaluate model on test set
+            num_classes = args.num_classes  
+            weights = args.BCE_weights
+            weights = torch.tensor(weights, dtype=torch.float)
+
+            class_weights = 1.0 / torch.sqrt(weights)  # ou pow(counts, -0.5)
+            class_weights = class_weights / class_weights.sum() * len(class_weights)
+            class_weights = class_weights.to(device)
+
+            if args.loss_func == 'wasserstein':
+                loss_fn = SamplesLoss("sinkhorn", p=1, blur=0.05)
+                train_criterion = loss_fn #torch.nn.CrossEntropyLoss(weight=class_weights)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)  
+            elif args.loss_func == 'dist_weighted':
+                train_criterion = DistAndClassWeightedCE(num_classes=num_classes, class_weights=class_weights, f=lambda d: d)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            elif args.loss_func == 'ce':
+                train_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            elif args.loss_func == 'wass_and_ce':
+                train_criterion = TotalLoss(num_classes=num_classes, class_weights=class_weights, args=args)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            else:
+                raise ValueError(f"Unknown loss function: {args.loss_func}")
+
             test_targs, test_preds, test_probs, test_results = valid_fn(
-                test_loader, fold_model, criterion = torch.nn.BCEWithLogitsLoss(reduction='mean'), args = args, device = device, split = 'test')
+                test_loader, fold_model, criterion = eval_criterion, args = args, device = device, split = 'test')
 
             # free GPU memory
             del fold_model; clear_memory()
@@ -124,7 +157,7 @@ def do_experiments(args, device):
 
                 # Generate confusion matrix and ROC curves
                 plot_confusion_matrix(test_results['aggregated']['cf_matrix'], label_dict, '', path_results_run)
-                ROC_curves(test_targs, test_probs, '', path_results_run)
+                ROC_curves_multiclass(test_targs, test_probs, '', path_results_run)
 
                 # Append results per scale
                 if (args.type_scale_aggregator in ['concatenation', 'gated-attention'] and args.deep_supervision) or args.type_scale_aggregator in ['max_p', 'mean_p']:  
@@ -153,7 +186,7 @@ def do_experiments(args, device):
                 print(f"Test F1-Score: {test_results['f1']:.4f} | Test Bacc: {test_results['bacc']:.4f} | Test ROC-AUC: {test_results['auc_roc']:.4f}")           
 
                 plot_confusion_matrix(test_results['cf_matrix'], label_dict, '', path_results_run)
-                ROC_curves(test_targs, test_probs, '', path_results_run)
+                ROC_curves_multiclass(test_targs, test_probs, '', path_results_run)
                 
                 # Append Results 
                 all_val_results['f1'].append(val_results['f1'])
@@ -283,8 +316,30 @@ def do_experiments(args, device):
             fold_model.to(device)
 
             # Evaluate on test set
+            weights = args.BCE_weights
+            class_weights = 1.0 / torch.sqrt(weights)  # ou pow(counts, -0.5)
+            class_weights = class_weights / class_weights.sum() * len(class_weights)
+
+            class_weights = class_weights.to(device)
+            if args.loss_func == 'wasserstein':
+                loss_fn = SamplesLoss("sinkhorn", p=1, blur=0.05)
+                train_criterion = loss_fn #torch.nn.CrossEntropyLoss(weight=class_weights)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            elif args.loss_func == 'dist_weighted':
+                train_criterion = DistAndClassWeightedCE(num_classes=num_classes, class_weights=class_weights, f=lambda d: d)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            elif args.loss_func == 'ce':
+                train_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            elif args.loss_func == 'wass_and_ce':
+                train_criterion = TotalLoss(num_classes=num_classes, class_weights=class_weights, args=args)
+                eval_criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
+            else:
+                raise ValueError(f"Unknown loss function: {args.loss_func}")
+
+            
             test_targs, test_preds, test_probs, test_results = valid_fn(
-                test_loader, fold_model, criterion = torch.nn.BCEWithLogitsLoss(reduction='mean'), args = args, device = device, split = 'test')
+                test_loader, fold_model, criterion = eval_criterion, args = args, device = device, split = 'test')
 
             del fold_model; clear_memory()
 
@@ -307,7 +362,7 @@ def do_experiments(args, device):
 
             # Save confusion matrix and ROC curves
             plot_confusion_matrix(test_results['aggregated']['cf_matrix'], label_dict, '', fold_path)
-            ROC_curves(test_targs, test_probs, '', fold_path)
+            ROC_curves_multiclass(test_targs, test_probs, '', fold_path)
 
         # Create a dictionary to hold all final results
         val_results_data = {'folds': np.arange(args.n_folds)}
@@ -401,7 +456,7 @@ def k_experiment(train_df, val_df, output_path, args, device):
 
 def train_loop(train_loader, valid_loader, model, training_stage_manager, train_criterion, eval_criterion, optimizer, scheduler, scaler, output_path, args, device):
 
-    best_aucroc = 0.
+    best_metric = 0.
     best_epoch = 0 
 
     # Dictionaries to keep track of training and validation metrics per epoch
@@ -434,7 +489,14 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
                     print(f"Scale: {s} --> Train F1-Score: {train_stats[s]['f1']:.4f} | Train Bacc: {train_stats[s]['bacc']:.4f} | Train ROC-AUC: {train_stats[s]['auc_roc']:.4f}")
                 
             print(f"Aggregated Results --> Train F1-Score: {train_stats['aggregated']['f1']:.4f} | Train Bacc: {train_stats['aggregated']['bacc']:.4f} | Train ROC-AUC: {train_stats['aggregated']['auc_roc']:.4f}")
-        
+
+            if train_stats['aggregated']['cf_matrix'] is not None:
+                print(f"\n{'='*20}")
+                print(f"Confusion Matrix - training - epoch {epoch+1}")
+                print(f"{'='*20}")
+                print(train_stats['aggregated']['cf_matrix'])
+                print(f"{'='*20}\n")
+ 
             print(f"\nVal Loss: {val_stats['loss']:.4f}") 
 
             if (args.type_scale_aggregator in ['concatenation', 'gated-attention'] and args.deep_supervision) or args.type_scale_aggregator in ['max_p', 'mean_p']: 
@@ -442,7 +504,16 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
                     print(f"Scale: {s} --> Val F1-Score: {val_stats[s]['f1']:.4f} | Val Bacc: {val_stats[s]['bacc']:.4f} | Val ROC-AUC: {val_stats[s]['auc_roc']:.4f}")            
             
             print(f"Aggregated Results --> Val F1-Score: {val_stats['aggregated']['f1']:.4f} | Val Bacc: {val_stats['aggregated']['bacc']:.4f} | Val ROC-AUC: {val_stats['aggregated']['auc_roc']:.4f}")
-        
+
+            if val_stats['aggregated']['cf_matrix'] is not None:
+                print(f"\n{'='*20}")
+                print(f"Confusion Matrix - validation - epoch {epoch+1}")
+                print(f"{'='*20}")
+                print(val_stats['aggregated']['cf_matrix'])
+                print(f"{'='*20}\n")
+
+
+
             # Update results dictionary
             train_results['loss'].append(train_stats['loss'])
             train_results['f1'].append(train_stats['aggregated']['f1'])
@@ -456,17 +527,24 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
             val_results['auc_roc'].append(val_stats['aggregated']['auc_roc'])
 
             # Save checkpoint if best validation ROC-AUC so far
-            if best_aucroc < val_stats['aggregated']['auc_roc']:
-                best_aucroc = val_stats['aggregated']['auc_roc']
-                best_val_stats = val_stats 
-    
+
+            if args.best_metric == 'auc_roc':
+                metric_to_check = 'auc_roc'
+            elif args.best_metric == 'bacc':
+                metric_to_check = 'bacc'
+            else:
+                raise ValueError(f"Unknown best metric: {args.best_metric}")
+            if best_metric < val_stats['aggregated'][metric_to_check]:
+                best_metric = val_stats['aggregated'][metric_to_check]
+                best_val_stats = val_stats
+
                 best_epoch = epoch + 1
                               
                 model_name = 'best_model.pth'
                 best_checkpoint_path = output_path / model_name
                 
-                print(f'\nEpoch {epoch + 1} - Save aucroc: {best_aucroc:.4f} Model')
-                    
+                print(f'\nEpoch {epoch + 1} - Save {metric_to_check}: {best_metric:.4f} Model')
+
                 torch.save(
                     { 
                         'model': model.state_dict(),
@@ -485,7 +563,14 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
             print(f"\nTrain Loss: {train_stats['loss']:.4f} | Train F1-Score: {train_stats['f1']:.4f} | Train Bacc: {train_stats['bacc']:.4f} | Train ROC-AUC: {train_stats['auc_roc']:.4f}")
             
             print(f"\nVal Loss: {val_stats['loss']:.4f} | Val F1-Score: {val_stats['f1']:.4f} | Val. Bacc: {val_stats['bacc']:.4f} | Val ROC-AUC: {val_stats['auc_roc']:.4f}\n")
-        
+            
+            if val_stats['cf_matrix'] is not None:
+                print(f"\n{'='*20}")
+                print(f"Confusion Matrix - validation - epoch {epoch+1}")
+                print(f"{'='*20}")
+                print(val_stats['cf_matrix'])
+                print(f"{'='*20}\n")
+
             # Update results dictionary
             train_results['loss'].append(train_stats['loss'])
             train_results['f1'].append(train_stats['f1'])
@@ -499,17 +584,23 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
             val_results['auc_roc'].append(val_stats['auc_roc'])
 
             # Save checkpoint if best validation ROC-AUC so far
-            if best_aucroc < val_stats['auc_roc']:
-                best_aucroc = val_stats['auc_roc']
-                best_val_stats = val_stats 
-    
+            if args.best_metric == 'auc_roc':
+                metric_to_check = 'auc_roc'
+            elif args.best_metric == 'bacc':
+                metric_to_check = 'bacc'
+            else:
+                raise ValueError(f"Unknown best metric: {args.best_metric}")
+            if best_metric < val_stats['aggregated'][metric_to_check]:
+                best_metric = val_stats['aggregated'][metric_to_check]
+                best_val_stats = val_stats
+
                 best_epoch = epoch + 1
                               
                 model_name = 'best_model.pth'
                 best_checkpoint_path = output_path / model_name
-                
-                print(f'Epoch {epoch + 1} - Save aucroc: {best_aucroc:.4f} Model')
-                    
+
+                print(f'Epoch {epoch + 1} - Save {metric_to_check}: {best_metric:.4f} Model')
+
                 torch.save(
                     { 
                         'model': model.state_dict(),
@@ -522,11 +613,11 @@ def train_loop(train_loader, valid_loader, model, training_stage_manager, train_
                     }, best_checkpoint_path
                 )
 
-        print(f'\nbest AUC-ROC Score at epoch {best_epoch}: {best_aucroc:.4f}')
+        print(f'\nbest {metric_to_check} Score at epoch {best_epoch}: {best_metric:.4f}')
 
     # Plot learning rate scheduler curve and training/validation metrics curves
     plot_lrs_scheduler(train_results['lr'], output_path)
-    plot_loss_and_acc_curves(train_results, val_results, 'auc_roc', output_path)
+    plot_loss_and_acc_curves(train_results, val_results, metric_to_check, output_path)
 
     # Clear GPU memory cache and garbage collect
     torch.cuda.empty_cache()
@@ -570,6 +661,7 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
         
     start = time.time()
 
+
     # Iterate over batches
     for step, data in progress_iter:
 
@@ -586,7 +678,9 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
 
         labels = data['y'].float().to(device)
         
+        
         # Wrap forward pass with autocast
+        optimizer.zero_grad()
         with torch.cuda.amp.autocast(enabled=args.apex):
 
             if args.mil_type == 'pyramidal_mil':
@@ -599,8 +693,15 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
                         logits= model(inputs) 
                     
                     logits = logits.nan_to_num()
-                    
-                    loss = criterion(logits.view(-1, 1), labels.view(-1, 1))
+
+                    if args.loss_func == 'wasserstein':
+                        labels_one_hot = F.one_hot(labels.long(), num_classes = args.num_classes).float()
+                        probs_logits = F.softmax(logits, dim=1)
+
+                        loss = criterion(probs_logits, labels_one_hot)
+                    else:
+                        loss = criterion(logits, labels.long())
+
                     
                 elif args.type_scale_aggregator in ['max_p', 'mean_p']: 
                     side_logits = model(inputs)
@@ -611,15 +712,28 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
                 # single-scale mil models 
                 logits = model(inputs)
 
-                loss = criterion(logits.view(-1, 1), labels.view(-1, 1))
+                if args.loss_func == 'wasserstein':
+                    labels_one_hot = F.one_hot(labels.long(), num_classes = args.num_classes).float()
+                    probs_logits = F.softmax(logits, dim=1)
+                    loss = criterion(probs_logits, labels_one_hot)
+                else:
+                    loss = criterion(logits, labels.long())
 
+        
         if (args.type_scale_aggregator in ['concatenation', 'gated-attention'] and args.deep_supervision) or args.type_scale_aggregator in ['max_p', 'mean_p']: 
             
             for idx, side_logit in enumerate(side_logits): 
                 side_logit = side_logit.nan_to_num()
-                    
-                loss += criterion(side_logit.view(-1, 1), labels.view(-1, 1))
-        
+
+                if args.loss_func == 'wasserstein':
+                    labels_one_hot = F.one_hot(labels.long(), num_classes = args.num_classes).float()
+                    probs_side_logits = F.softmax(side_logit, dim=1)
+
+                    loss += criterion(probs_side_logits, labels_one_hot)
+
+                else:
+                    loss += criterion(side_logit, labels.long())
+
         losses.update(loss.item(), batch_size)
 
         # Backprop w/ gradient scaling
@@ -652,20 +766,21 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
 
                 # Store scale-specific predictions and probabilities
                 for idx, s in enumerate(args.scales): 
-                    y_probs = side_logits[idx].sigmoid().detach()
-                    y_probs = y_probs.nan_to_num()
                     
-                    y_preds = (y_probs > 0.5).float()
+                    y_probs = F.softmax(side_logits[idx], dim=1).detach()
+                    y_probs = y_probs.nan_to_num() # to keep ?
+                    
+                    y_preds = torch.argmax(y_probs, dim=1).float()
                     
                     probs[s].append(y_probs.cpu().numpy())
                     preds[s].append(y_preds.cpu().numpy())
 
             # Store multi-scale aggregated predictions and probabilities depending on multi-scale aggregator 
             if args.type_scale_aggregator in ['concatenation', 'gated-attention']:
-                y_probs = logits.sigmoid().detach()
+                y_probs = F.softmax(logits, dim=1).detach()
                 y_probs = y_probs.nan_to_num()
                 
-                y_preds = (y_probs > 0.5).float()
+                y_preds = torch.argmax(y_probs, dim=1).float()
     
                 probs['aggregated'].append(y_probs.cpu().numpy())
                 preds['aggregated'].append(y_preds.cpu().numpy())
@@ -675,7 +790,7 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
                 y_probs_aggregated = torch.zeros_like(y_probs)
     
                 for idx, s in enumerate(args.scales): 
-                    y_probs = side_logits[idx].sigmoid().detach()
+                    y_probs = F.softmax(side_logits[idx], dim=1).detach()
                     y_probs = y_probs.nan_to_num()  # Ensure no NaNs
     
                     if args.type_scale_aggregator == 'mean_p': 
@@ -684,14 +799,14 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
                     if args.type_scale_aggregator == 'max_p': 
                         y_probs_aggregated = torch.maximum(y_probs_aggregated, y_probs)
                         
-                y_preds_aggregated = (y_probs_aggregated > 0.5).float()
+                y_preds_aggregated = torch.argmax(y_probs_aggregated, dim=1).float()
                     
                 probs['aggregated'].append(y_probs_aggregated.cpu().numpy())
                 preds['aggregated'].append(y_preds_aggregated.cpu().numpy()) 
         
         else: # store predictions and probabilities for single-scale mil models 
-            y_probs = logits.sigmoid().detach()
-            y_preds = (y_probs > 0.5).float()
+            y_probs = F.softmax(logits, dim=1).detach()
+            y_preds = torch.argmax(y_probs, dim=1).float()
     
             probs.append(y_probs.cpu().numpy())
             preds.append(y_preds.cpu().numpy())
@@ -735,8 +850,9 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
 
         aucroc = auroc(targs, probs)
         f1, bacc = evaluate_metrics(targs, preds) 
-    
-        train_stats['aggregated'] = {'auc_roc': aucroc, 'bacc': bacc, 'f1': f1}
+        cf_matrix = confusion_matrix(targs, preds)
+
+        train_stats['aggregated'] = {'auc_roc': aucroc, 'bacc': bacc, 'f1': f1, 'cf_matrix': cf_matrix}
 
     else: # single-scale mil models 
         preds = np.concatenate(preds)
@@ -744,14 +860,14 @@ def train_fn(train_loader, model, criterion, optimizer, epoch, args, scheduler, 
     
         aucroc = auroc(targs, probs)
         f1, bacc = evaluate_metrics(targs, preds)
+        cf_matrix = confusion_matrix(targs, preds)
 
-        train_stats.update({'auc_roc': aucroc, 'bacc': bacc, 'f1': f1})
-    
-    return train_stats 
+        train_stats.update({'auc_roc': aucroc, 'bacc': bacc, 'f1': f1, 'cf_matrix': cf_matrix})
+
+    return train_stats
 
 @torch.no_grad()
 def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=1):
-    
     model.eval() # Set model to evaluation mode
     model.is_training = False 
     
@@ -787,7 +903,7 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
         progress_iter = tqdm(enumerate(valid_loader), 
                              total=len(valid_loader)
                             )
-    
+
     for step, data in progress_iter:
 
         # Send data to device
@@ -802,7 +918,12 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
             batch_size = inputs.size(0)
 
         labels = data['y'].float().to(device)
+
+        if args.loss_func == 'wasserstein':
+            labels_one_hot = F.one_hot(labels.long(), num_classes = args.num_classes).float()
         
+
+
         # Wrap forward pass with autocast
         with torch.cuda.amp.autocast(enabled=args.apex):
 
@@ -813,13 +934,18 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
                     # Model returns logits for the scale-specific and multi-scale branches if deep supervision enabled
                     if args.deep_supervision: 
                         logits, side_logits = model(inputs) 
-                    else: # Model returns logits only for the multi-scale branch 
-                        logits = model(inputs) 
-                        
+                        probs_logits = F.softmax(logits, dim=1)
+                    else: # Model returns logits only for the multi-scale branch
+                        logits = model(inputs)
+                        probs_logits = F.softmax(logits, dim=1)
+
                     logits = logits.nan_to_num()
-                    
-                    loss = criterion(logits.view(-1, 1), labels.view(-1, 1))
-                    
+
+                    if args.loss_func == 'wasserstein':
+                        loss = criterion(probs_logits, labels_one_hot)
+                    else:
+                        loss = criterion(logits, labels.long())
+
                 elif args.type_scale_aggregator in ['mean_p', 'max_p']:
                     side_logits = model(inputs)
                     
@@ -828,14 +954,27 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
             else: # single-scale mil models 
                 logits = model(inputs)
 
-                loss = criterion(logits.view(-1, 1), labels.view(-1, 1))
+                if args.loss_func == 'wasserstein':
+                    probs_logits = F.softmax(logits, dim=1)
+                    loss = criterion(probs_logits, labels_one_hot)
+                else:
+                    loss = criterion(logits, labels.long())
+                
+
 
         if (args.type_scale_aggregator in ['concatenation', 'gated-attention'] and args.deep_supervision) or args.type_scale_aggregator in ['max_p', 'mean_p']:
             for idx, side_logit in enumerate(side_logits): 
                 side_logit = side_logit.nan_to_num()
-                    
-                loss += criterion(side_logit.view(-1, 1), labels.view(-1, 1))
                 
+                if args.loss_func == 'wasserstein':
+                    labels_one_hot = F.one_hot(labels.long(), num_classes = args.num_classes).float()
+                    probs_side_logits = F.softmax(side_logit, dim=1)
+                    
+                    loss += criterion(probs_side_logits, labels_one_hot)
+                else:
+                    loss += criterion(side_logit, labels.long())               
+ 
+
         losses.update(loss.item(), batch_size)
 
         targs.append(labels.cpu().numpy()) 
@@ -846,20 +985,20 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
                 
                 # Store scale-specific predictions and probabilities 
                 for idx, s in enumerate(args.scales): 
-                    y_probs = side_logits[idx].sigmoid().detach()
+                    y_probs = F.softmax(side_logits[idx], dim=1).detach()
                     y_probs = y_probs.nan_to_num()
                     
-                    y_preds = (y_probs > 0.5).float()
+                    y_preds = torch.argmax(y_probs, dim=1).float()
                     
                     probs[s].append(y_probs.cpu().numpy())
                     preds[s].append(y_preds.cpu().numpy())
 
             # store multi-scale aggregated probabilities and predictions depending on multi-scale aggregator type 
             if args.type_scale_aggregator in ['concatenation', 'gated-attention']:
-                y_probs = logits.sigmoid().detach()
+                y_probs = F.softmax(logits, dim=1).detach()
                 y_probs = y_probs.nan_to_num()
                 
-                y_preds = (y_probs > 0.5).float()
+                y_preds = torch.argmax(y_probs, dim=1).float()
     
                 probs['aggregated'].append(y_probs.cpu().numpy())
                 preds['aggregated'].append(y_preds.cpu().numpy())
@@ -869,7 +1008,7 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
                 y_probs_aggregated = torch.zeros_like(y_probs)
     
                 for idx, s in enumerate(args.scales): 
-                    y_probs = side_logits[idx].sigmoid().detach()
+                    y_probs = F.softmax(side_logits[idx], dim=1).detach()
                     y_probs = y_probs.nan_to_num()
     
                     if args.type_scale_aggregator == 'mean_p': 
@@ -878,15 +1017,15 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
                     if args.type_scale_aggregator == 'max_p': 
                         y_probs_aggregated = torch.maximum(y_probs_aggregated, y_probs)
                         
-                y_preds_aggregated = (y_probs_aggregated > 0.5).float()
+                y_preds_aggregated = torch.argmax(y_probs_aggregated, dim=1).float()
                     
                 probs['aggregated'].append(y_probs_aggregated.cpu().numpy())
                 preds['aggregated'].append(y_preds_aggregated.cpu().numpy()) 
 
         else: # store predictions and probabilities for single-scale mil models 
 
-            y_probs = logits.sigmoid().detach()
-            y_preds = (y_probs > 0.5).float()
+            y_probs = F.softmax(logits, dim=1).detach()
+            y_preds = torch.argmax(y_probs, dim=1).float()
     
             probs.append(y_probs.cpu().numpy())
             preds.append(y_preds.cpu().numpy())
@@ -910,7 +1049,7 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
 
         if (args.type_scale_aggregator in ['concatenation', 'gated-attention'] and args.deep_supervision) or args.type_scale_aggregator in ['max_p', 'mean_p']:
 
-            # Metrics per scale if applicable
+            # Metrics per scale if applicable*
             for s in args.scales:
     
                 preds_s = np.concatenate(preds[s])
@@ -927,7 +1066,7 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
     
         aucroc = auroc(targs, probs)
         f1, bacc = evaluate_metrics(targs, preds) 
-        cf_matrix = confusion_matrix(targs, preds) if split == 'test' else None
+        cf_matrix = confusion_matrix(targs, preds) #if split == 'test' else None
             
         val_stats['aggregated'] = {'auc_roc': aucroc, 'bacc': bacc, 'f1': f1, 'cf_matrix': cf_matrix}
 
@@ -938,7 +1077,7 @@ def valid_fn(valid_loader, model, criterion, args, device, split = 'val', epoch=
     
         aucroc = auroc(targs, probs)
         f1, bacc = evaluate_metrics(targs, preds) 
-        cf_matrix = confusion_matrix(targs, preds) if split == 'test' else None
+        cf_matrix = confusion_matrix(targs, preds) #if split == 'test' else None
         
         val_stats.update({'auc_roc': aucroc, 'bacc': bacc, 'f1': f1, 'cf_matrix': cf_matrix})
     

@@ -165,7 +165,7 @@ class MIL(nn.Module):
                 embedding_size: int = 512, 
                 sigmoid_func: bool = False,
                 softmax_func: bool = True,
-                n_class: int = 1,
+                num_classes: int = 1,
                 drop_classhead: float = 0.0,
                 map_prob_func:str = 'softmax',
                 # MIL encoder args
@@ -185,7 +185,7 @@ class MIL(nn.Module):
     
         super().__init__()
 
-        self.n_class = n_class
+        self.num_classes = num_classes
         self.sigmoid_func = sigmoid_func
         self.softmax_func = softmax_func
         self.drop_classhead = drop_classhead
@@ -218,7 +218,7 @@ class MIL(nn.Module):
         if not multi_scale_model: 
             self.encoder = self.MILEncoder(embedding_size, fcl_encoder_dim, scale = 0)
             self.aggregator = self.MILAggregator(fcl_encoder_dim)
-            self.classifier = head(fcl_encoder_dim, n_class, sigmoid_func, softmax_func, drop_classhead)
+            self.classifier = head(fcl_encoder_dim, num_classes, sigmoid_func, softmax_func, drop_classhead)
 
     def MILEncoder(self, dim_in, dim_hidden, scale = None, type_encoder = None) -> None:
         """
@@ -374,20 +374,20 @@ class PyramidalMILmodel(MIL):
         if self.type_scale_aggregator in ['concatenation', 'gated-attention']: 
             
             if deep_supervision:
-                self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
+                self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
 
             self.scale_aggregator = self.ScaleAggregator(type_scale_aggregator, dim_in = self.fcl_encoder_dim)
             
             # final classifier head at the multi-scale aggregation level 
             if type_scale_aggregator == 'concatenation':
-                self.classifier = head(self.fcl_encoder_dim*len(self.scales), self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead)
+                self.classifier = head(self.fcl_encoder_dim*len(self.scales), self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead)
             
             else: 
-                self.classifier = head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead)
+                self.classifier = head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead)
 
         elif self.type_scale_aggregator in ['max_p', 'mean_p']:
             
-            self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
+            self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
   
         self.patch_scores = {}
         self.scale_scores = None 
@@ -513,7 +513,7 @@ class PyramidalMILmodel(MIL):
                 scale_outputs.append(x_patches)
     
                 if self.deep_supervision: 
-                    # (Batch_size, embedding_size) -> (Batch_size, n_class)
+                    # (Batch_size, embedding_size) -> (Batch_size, num_classes)
                     deep_spv_out = self.side_classifiers[f'classifier_{scale}'](x_patches)
                     deep_spv_outputs.append(deep_spv_out)
                             
@@ -524,7 +524,7 @@ class PyramidalMILmodel(MIL):
         # --- Scale Aggregation & Final Classification ---
         if self.type_scale_aggregator in ['concatenation', 'gated-attention']:  
             # Stack outputs along a new dimension, num_scales, to create a tensor of shape 
-            # (batch_size, num_scales, embedding_size) or (batch_size, num_scales, n_class)
+            # (batch_size, num_scales, embedding_size) or (batch_size, num_scales, num_classes)
             x = torch.stack(scale_outputs, dim=1) 
     
             if self.type_scale_aggregator == 'gated-attention':
@@ -536,7 +536,7 @@ class PyramidalMILmodel(MIL):
                 # (batch_size, num_scales, embedding_size) --> (batch_size, num_scales*embedding_size)
                 x = self.scale_aggregator(x)
                 
-            # Apply a MLP to obtain the bag label: (Batch_size, embedding_size) -> (Batch_size, n_class)
+            # Apply a MLP to obtain the bag label: (Batch_size, embedding_size) -> (Batch_size, num_classes)
             if not self.is_training and self.type_scale_aggregator == 'concatenation' and x.shape[0] == 1: 
                 x, A = self.classifier(x, len(self.scales), self.fcl_encoder_dim, self.is_training)  
                 self.save_scale_scores(A)
@@ -599,21 +599,21 @@ class NestedPyramidalMILmodel(MIL):
         if self.type_scale_aggregator in ['concatenation', 'gated-attention']: 
             
             if deep_supervision:
-                self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
+                self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead) for scale in self.scales})
  
             self.scale_aggregator = self.ScaleAggregator(type_scale_aggregator, dim_in = self.fcl_encoder_dim)
 
             # final classifier head at the multi-scale aggregation level
             if type_scale_aggregator == 'concatenation':
-                self.classifier = head(self.fcl_encoder_dim*len(self.scales), self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead)
+                self.classifier = head(self.fcl_encoder_dim*len(self.scales), self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead)
             
             else: 
-                self.classifier = head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.softmax_func, self.drop_classhead)
+                self.classifier = head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.softmax_func, self.drop_classhead)
 
                 
         elif self.type_scale_aggregator in ['max_p', 'mean_p']:
 
-            self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.n_class, self.sigmoid_func, self.drop_classhead) for scale in self.scales})
+            self.side_classifiers = nn.ModuleDict({f'classifier_{scale}': head(self.fcl_encoder_dim, self.num_classes, self.sigmoid_func, self.drop_classhead) for scale in self.scales})
 
         self.inner_scores = {}         
         self.patch_scores = {}
@@ -758,7 +758,7 @@ class NestedPyramidalMILmodel(MIL):
                 scale_outputs.append(x_patches)
     
                 if self.deep_supervision: 
-                    # (Batch_size, embedding_size) -> (Batch_size, n_class)
+                    # (Batch_size, embedding_size) -> (Batch_size, num_classes)
                     deep_spv_out = self.side_classifiers[f'classifier_{scale}'](x_patches)
                     deep_spv_outputs.append(deep_spv_out)
                             
@@ -769,7 +769,7 @@ class NestedPyramidalMILmodel(MIL):
         # multi-scale aggregation 
         if self.type_scale_aggregator in ['concatenation', 'gated-attention']:  
             # Stack outputs along a new dimension, num_scales, to create a tensor of shape 
-            # (batch_size, num_scales, embedding_size) or (batch_size, num_scales, n_class)
+            # (batch_size, num_scales, embedding_size) or (batch_size, num_scales, num_classes)
             x = torch.stack(scale_outputs, dim=1) 
     
             if self.type_scale_aggregator == 'gated-attention':
@@ -782,7 +782,7 @@ class NestedPyramidalMILmodel(MIL):
                 x = self.scale_aggregator(x)
 
                 
-            # Final classification - Apply a MLP to obtain the bag label: (Batch_size, embedding_size) -> (Batch_size, n_class)
+            # Final classification - Apply a MLP to obtain the bag label: (Batch_size, embedding_size) -> (Batch_size, num_classes)
             if not self.is_training and self.type_scale_aggregator == 'concatenation' and x.shape[0] == 1: 
                 x, A = self.classifier(x, len(self.scales), self.fcl_encoder_dim, self.is_training)  
                 self.save_scale_scores(A)

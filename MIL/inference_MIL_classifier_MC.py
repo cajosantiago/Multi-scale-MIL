@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from Datasets.dataset_utils_MC import MIL_dataloader
 from MIL import build_model 
-from MIL.MIL_experiment_monotask import valid_fn
+from MIL.MIL_experiment_MC import valid_fn
 from utils.generic_utils import seed_all, print_network
 from utils.plot_utils_MC import plot_confusion_matrix, ROC_curves_multiclass
 from utils.data_split_utils import stratified_train_val_split

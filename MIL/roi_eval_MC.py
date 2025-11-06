@@ -1,7 +1,7 @@
 # internal imports
-from Datasets.dataset_utils import MIL_dataloader, Generic_MIL_Dataset, collate_MIL_patches
+from Datasets.dataset_utils_MC import MIL_dataloader, Generic_MIL_Dataset, collate_MIL_patches
 from MIL import build_model 
-from MIL.MIL_experiment import valid_fn
+from MIL.MIL_experiment_MC import valid_fn
 from utils.generic_utils import seed_all, clear_memory, print_network 
 from utils.data_split_utils import stratified_train_val_split
 
@@ -41,7 +41,9 @@ import io
 from scipy import ndimage
 from skimage.filters import threshold_otsu
 from scipy.ndimage import gaussian_filter, binary_erosion, binary_dilation, median_filter, gaussian_filter
-    
+
+"""file specifically made for detection"""
+
 def pad_image(img_array, patch_size):
     """
     Pads an image tensor so that its height and width are divisible by the given patch_size.
@@ -963,7 +965,7 @@ def run_roi_eval(directory, args, device):
             args.model_base_name = 'efficientnetb5'
         else:
             args.model_base_name = args.arch
-        
+
     args.num_classes = 1
 
     # Task specificities
@@ -985,6 +987,7 @@ def run_roi_eval(directory, args, device):
     
     args.df = pd.read_csv(args.data_dir / args.csv_file)
     args.df = args.df.fillna(0)
+    args.df['label_num'] = args.df[args.label].map(label_dict)
     
     if args.dataset == 'ViNDr':
         if args.roi_eval_set == 'val': 
