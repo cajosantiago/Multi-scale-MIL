@@ -24,6 +24,7 @@ import math
 from argparse import Namespace
 import cv2
 from datetime import datetime
+import pydicom
 
 args_mass = Namespace(
     pooling_type='gated-attention',
@@ -768,35 +769,57 @@ def main(args):
         gr.Markdown("## Breast Cancer Detection")
         with gr.Row():
             with gr.Column():
-                image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
+                # image_input = gr.Image(type="numpy", label="Upload or Drag & Drop Image")
+                input_image = gr.Image(label="Input Image")
+                image_input = gr.File(label="Upload or Drag & Drop Image (.png, .jpg, .dcm)")
                 classify_button = gr.Button("Process Image")
             with gr.Column():
                 output_image = gr.Image(label="Findings")
                 output_calc_label = gr.Label(label="Found Suspicious Calcifications")
                 output_mass_label = gr.Label(label="Found Masses")
 
-        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[output_calc_label, output_mass_label, output_image])
-    demo.launch()#share=True)
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[input_image, output_calc_label, output_mass_label, output_image])
+    demo.launch(server_name="0.0.0.0")#share=True)
 
 def load_dicom_image(file):
     """Read DICOM and return as normalized NumPy array."""
     ds = pydicom.dcmread(file.name)
     img = ds.pixel_array.astype(float)
-    img = (np.maximum(img, 0) / img.max()) * 255.0
-    return img.astype(np.uint8)
+    img = (img - img.min()) / (img.max() - img.min())
+    img = 1 - img if ds.PhotometricInterpretation == "MONOCHROME1" else img
+    return (img * 255.0).astype(np.uint8)
 
-def preprocess_image(image_or_dict):
-    if isinstance(image_or_dict, str) and image_or_dict.endswith(".dcm"):
-        # Direct path to DICOM file
-        return load_dicom_image(open(image_or_dict, "rb"))
-    elif isinstance(image_or_dict, np.ndarray):
-        return image_or_dict
+def preprocess_image(image_or_dicom):
+    # if image_or_dicom.endswith(".dcm"):
+    try:
+        img = load_dicom_image(open(image_or_dicom, "rb"))
+    except ValueError:
+        print("Not a dicom image")
     else:
-        raise ValueError("Unsupported input type.")
+        img = np.array(Image.open(image_or_dicom))
+    ## Apply VinDr-Mammo preprocessing pipeline
+    if len(img.shape) == 3 and img.shape[2] == 3: # RGB to Grayscale
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    # Some images have narrow exterior "frames" that complicate selection of the main data. Cutting off the frame
+    img = img[10:-10, 10:-10]
+    # regions of non-empty pixels
+    output = cv2.connectedComponentsWithStats((img > 20).astype(np.uint8), 8, cv2.CV_32S)
+    # stats.shape == (N, 5), where N is the number of regions, 5 dimensions correspond to:
+    # left, top, width, height, area_size
+    stats = output[2]
+    # finding max area which always corresponds to the breast data.
+    idx = stats[1:, 4].argmax() + 1
+    x1, y1, w, h = stats[idx][:4]
+    x2 = x1 + w
+    y2 = y1 + h
+    # cutting out the breast data
+    img = img[y1: y2, x1: x2]
+    return np.stack([img] * 3, axis=-1)
 
 # This function is called when the button is pressed
 def run_classifier(image):
-    image = preprocess_image(image_input)
+    print(image)
+    image = preprocess_image(image)
 
     # Save image
     os.makedirs('uploaded_images', exist_ok=True)
@@ -805,21 +828,21 @@ def run_classifier(image):
 
     # Load and preprocess image
     with torch.no_grad():
-        tfm = torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
-                                              torchvision.transforms.Normalize(mean=args.mean, std=args.std),
+        tfm1 = torchvision.transforms.Compose([torchvision.transforms.Resize(args.img_size),
+                                               torchvision.transforms.ToTensor()])
+        tfm2 = torchvision.transforms.Compose([torchvision.transforms.Normalize(mean=args.mean, std=args.std),
                                               lambda_funct(pad_image, args.patch_size, args.overlap, args.mean, args.std)
                                               ])
         reverse_normalize = torchvision.transforms.Normalize((-args.mean / args.std, -args.mean / args.std, -args.mean / args.std),
                                  (1.0 / args.std, 1.0 / args.std, 1.0 / args.std))
-        padded_image = tfm(image)
-        patching_transform = Patching(
-                                  patch_size=args.patch_size,
+        image = tfm1(Image.fromarray(image))
+        padded_image = tfm2(image)
+        patching_transform = Patching(patch_size=args.patch_size,
                                   overlap=args.overlap,
                                   multi_scale_model=args.multi_scale_model,
-                                  scales=args.scales
-                              )
+                                  scales=args.scales)
         x, bag_coords, padding = patching_transform(padded_image) #(padding_left, padding_right, padding_top, padding_bottom)
-        width, height = image.shape[1], image.shape[0]
+        width, height = image.shape[2], image.shape[1]
         bag_info = {
             'patch_size': args.patch_size,
             'step_size': args.patch_size - int(args.patch_size * args.overlap[0]),
@@ -846,7 +869,7 @@ def run_classifier(image):
 
         # Visualize detected lesions
         # Draw bounding boxes
-        image_with_boxes = Image.fromarray(image)
+        image_with_boxes = torchvision.transforms.ToPILImage()(image)
         draw = ImageDraw.Draw(image_with_boxes)
         if prob_calc>.5:
             heatmaps_calc, predicted_bboxes_calc = visualize_detection(args, model_calc, seg_mask, bag_coords, bag_info)
@@ -872,10 +895,9 @@ def run_classifier(image):
                 y2 -= padding[2]
                 draw.rectangle([(x1, y1), (x2, y2)], outline="red", width=3)
                 draw.text((x1, y1 - 15), f"Mass ({score:.1%})", fill="red")
-    return ({"No": 1-prob_calc,
-            "Yes": prob_calc},
-            {"No": 1-prob_mass,
-             "Yes": prob_mass},
+    return (torchvision.transforms.ToPILImage()(image),
+            {"No": 1-prob_calc, "Yes": prob_calc},
+            {"No": 1-prob_mass, "Yes": prob_mass},
             image_with_boxes)
 
 
