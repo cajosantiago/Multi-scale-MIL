@@ -41,6 +41,12 @@ args_density = Namespace(
     num_classes = 4,
     label = 'breast_density'
     )
+args_birads = Namespace(pooling_type='gated-attention',
+    type_mil_encoder='mlp',
+    multi_view = True,
+    num_classes = 5,
+    label = 'breast_birads'
+    )
 
 def config():
     parser = argparse.ArgumentParser()

@@ -189,7 +189,11 @@ def main(args):
             args.BCE_weights = 15.573306370070778
         elif args.weighted_BCE == "y" and args.dataset.lower() == "vindr" and args.label.lower() == "suspicious_calcification":
             args.BCE_weights = 37.296728971962615
-        
+        elif args.weighted_BCE == "y" and args.dataset.lower() == "vindr" and args.label.lower() == "breast_birads":
+            args.BCE_weights= [13406, 4676, 930, 762, 226] 
+        elif args.weighted_BCE == "y" and args.dataset.lower() == "vindr" and args.label.lower() == 'breast_density':
+            args.BCE_weights = [100, 1908, 15292, 2700]
+
         if args.mil_type: 
 
             #ENCODER STAGE 
