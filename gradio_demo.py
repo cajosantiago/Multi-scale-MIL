@@ -34,19 +34,19 @@ args_calc = Namespace(
     pooling_type='pma',
     type_mil_encoder='isab'
 )
+
 args_density = Namespace(
-    pooling_type='gated-attention',
-    type_mil_encoder='mlp',
-    multi_view = True,
-    num_classes = 4,
-    label = 'breast_density'
-    )
-args_birads = Namespace(pooling_type='gated-attention',
-    type_mil_encoder='mlp',
-    multi_view = True,
-    num_classes = 5,
-    label = 'breast_birads'
-    )
+    pooling_type='max',
+    type_scale_aggregator='gated-attention',
+    spatial_pooling='avg',
+    multi_view=True,
+    num_classes=5,
+    multi_scale_model='msp',
+    epochs=60,
+    scales=[128, 256, 384],
+    loss_func='dist_weighted',
+    label='breast_density'
+)
 
 def config():
     parser = argparse.ArgumentParser()
@@ -768,6 +768,20 @@ def main(args):
     model_mass.load_state_dict(checkpoint['model'], strict=False)
     model_mass.is_training = False  # Set model mode for evaluation
     model_mass.eval()
+
+    # Density Model : Aggregated Results --> Test F1-Score: 0.5350 | Test Bacc: 0.7598 | Test ROC-AUC: 0.9095
+    global model_density
+    vars(args).update(vars(args_density))
+    model_density = build_model(args)
+    checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth')
+    if not os.path.exists(checkpoint_path):
+        os.makedirs('checkpoints/', exist_ok=True)
+        gdown.download('https://drive.google.com/file/d/1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx/view?usp=sharing', checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    model_density.load_state_dict(checkpoint['model'], strict=False)
+    model_density.is_training = False  # Set model mode for evaluation
+    model_density.eval()
+
 
     ## Launch gradio demo
     # Build Gradio interface
