@@ -40,13 +40,26 @@ args_density = Namespace(
     type_scale_aggregator='gated-attention',
     spatial_pooling='avg',
     multi_view=True,
-    num_classes=5,
+    num_classes=4,
     multi_scale_model='msp',
     epochs=60,
     scales=[128, 256, 384],
     loss_func='dist_weighted',
     label='breast_density'
 )
+
+args_birads = Namespace(
+    pooling_type='gated-attention',
+    type_mil_encoder='mlp',
+    type_scale_aggregator='gated-attention',
+    multi_view=True,
+    num_classes=5,
+    epochs=20,
+    scales=[16, 32, 128],
+    loss_func='dist_weighted',
+    label='breast_birads'
+)
+
 
 def config():
     parser = argparse.ArgumentParser()
@@ -773,14 +786,29 @@ def main(args):
     global model_density
     vars(args).update(vars(args_density))
     model_density = build_model(args)
-    checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth')
+    checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth') #is does not work try best_model.pth
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/drive/folders/1atkGjx5dyFJbUlC_833KBvO0po5eNrMq?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/file/d/1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx/view?usp=sharing', checkpoint_path)
+        
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_density.load_state_dict(checkpoint['model'], strict=False)
     model_density.is_training = False  # Set model mode for evaluation
     model_density.eval()
+
+    global model_birads
+    vars(args).update(vars(args_birads))
+    model_birads = build_model(args)
+    checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_1.pth') 
+    if not os.path.exists(checkpoint_path):
+        os.makedirs('checkpoints/', exist_ok=True)
+        gdown.download('https://drive.google.com/file/d/1zuGEfMXBsfR1GlnHHEYKgYsIAhil_EtN/view?usp=sharing', checkpoint_path)
+        
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    model_birads.load_state_dict(checkpoint['model'], strict=False)
+    model_birads.is_training = False  # Set model mode for evaluation
+    model_birads.eval()
+
 
 
     ## Launch gradio demo
@@ -798,8 +826,9 @@ def main(args):
                 output_calc_label = gr.Label(label="Found Suspicious Calcifications")
                 output_mass_label = gr.Label(label="Found Masses")
                 output_density_label = gr.Label(label="Breast Density Level")
+                output_birads_label = gr.Label(label="Predicted BI-RADS Level")
 
-        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[input_image, output_calc_label, output_mass_label, output_density_label, output_image])
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[input_image, output_calc_label, output_mass_label, output_density_label, output_birads_label, output_image])
     demo.launch(server_name="0.0.0.0")#share=True)
 
 def load_dicom_image(file):
@@ -887,6 +916,11 @@ def run_classifier(image):
         model_density.to('cpu')
         prob_density = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
+        model_birads.to(device)
+        output, _ = model_birads(x)
+        model_birads.to('cpu')
+        prob_birads = torch.sigmoid(output).cpu().detach().squeeze().numpy()
+
         # Segment image to create segmentation mask
         seg_mask = Segment(reverse_normalize(padded_image[0])).to(torch.bool)
         if not seg_mask.any():
@@ -924,7 +958,8 @@ def run_classifier(image):
     return (torchvision.transforms.ToPILImage()(image),
             {"No": 1-prob_calc, "Yes": prob_calc},
             {"No": 1-prob_mass, "Yes": prob_mass},
-            { "Level A": prob_density[0], "Level B": prob_density[1], "Level C": prob_density[2], "Level D": prob_density[3]},
+            { "Density A": prob_density[0], "Density B": prob_density[1], "Density C": prob_density[2], "Density D": prob_density[3]},
+            {"BI-RADS 1": prob_birads[0], "BI-RADS 2": prob_birads[1], "BI-RADS 3": prob_birads[2], "BI-RADS 4": prob_birads[3]},
             image_with_boxes)
 
 
