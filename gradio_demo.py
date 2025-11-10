@@ -797,8 +797,9 @@ def main(args):
                 output_image = gr.Image(label="Findings")
                 output_calc_label = gr.Label(label="Found Suspicious Calcifications")
                 output_mass_label = gr.Label(label="Found Masses")
+                output_density_label = gr.Label(label="Breast Density Level")
 
-        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[input_image, output_calc_label, output_mass_label, output_image])
+        classify_button.click(fn=run_classifier, inputs=image_input, outputs=[input_image, output_calc_label, output_mass_label, output_density_label, output_image])
     demo.launch(server_name="0.0.0.0")#share=True)
 
 def load_dicom_image(file):
@@ -881,6 +882,11 @@ def run_classifier(image):
         model_mass.to('cpu')
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
 
+        model_density.to(device)
+        output, _ = model_density(x)
+        model_density.to('cpu')
+        prob_density = torch.sigmoid(output).cpu().detach().squeeze().numpy()
+
         # Segment image to create segmentation mask
         seg_mask = Segment(reverse_normalize(padded_image[0])).to(torch.bool)
         if not seg_mask.any():
@@ -918,6 +924,7 @@ def run_classifier(image):
     return (torchvision.transforms.ToPILImage()(image),
             {"No": 1-prob_calc, "Yes": prob_calc},
             {"No": 1-prob_mass, "Yes": prob_mass},
+            { "Level A": prob_density[0], "Level B": prob_density[1], "Level C": prob_density[2], "Level D": prob_density[3]},
             image_with_boxes)
 
 
