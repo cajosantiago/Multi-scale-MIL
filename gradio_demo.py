@@ -54,7 +54,7 @@ args_birads = Namespace(
     type_scale_aggregator='gated-attention',
     multi_view=True,
     num_classes=5,
-    epochs=20,
+    epochs=30,
     scales=[16, 32, 128],
     loss_func='dist_weighted',
     label='breast_birads'
@@ -804,7 +804,7 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_1.pth') 
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/uc?id=1zuGEfMXBsfR1GlnHHEYKgYsIAhil_EtN', checkpoint_path)
+        gdown.download('https://drive.google.com/uc?id=1Hzv10iEFmdcFsYZme4AE3y2qqrpWjgKa', checkpoint_path)
 
         
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
