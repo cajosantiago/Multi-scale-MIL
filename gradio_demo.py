@@ -763,7 +763,7 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_calcifications.pth')
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/file/d/1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI/view?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/uc?id=1pcr5wa8cI7R8L-7MfkXBEBB2IE02NmMI', checkpoint_path)
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_calc.load_state_dict(checkpoint['model'], strict=False)
     model_calc.is_training = False  # Set model mode for evaluation
@@ -776,7 +776,7 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_FPN-MIL_mass.pth')
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/file/d/1ptgub09TjB2oCpm2ij2OyaVDKT_5y8D0/view?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/uc?id=1ptgub09TjB2oCpm2ij2OyaVDKT_5y8D0', checkpoint_path)
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_mass.load_state_dict(checkpoint['model'], strict=False)
     model_mass.is_training = False  # Set model mode for evaluation
@@ -789,7 +789,8 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth') #is does not work try best_model.pth
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/file/d/1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx/view?usp=sharing', checkpoint_path)
+        # gdown.download('https://drive.google.com/file/d/1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx/view?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/uc?id=1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx', checkpoint_path)
         
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_density.load_state_dict(checkpoint['model'], strict=False)
@@ -803,7 +804,8 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_1.pth') 
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/file/d/1zuGEfMXBsfR1GlnHHEYKgYsIAhil_EtN/view?usp=sharing', checkpoint_path)
+        gdown.download('https://drive.google.com/uc?id=1zuGEfMXBsfR1GlnHHEYKgYsIAhil_EtN', checkpoint_path)
+
         
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_birads.load_state_dict(checkpoint['model'], strict=False)
