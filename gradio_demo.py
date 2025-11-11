@@ -57,7 +57,8 @@ args_birads = Namespace(
     epochs=30,
     scales=[16, 32, 128],
     loss_func='dist_weighted',
-    label='breast_birads'
+    label='breast_birads',
+    deep_supervision=False
 )
 
 
@@ -782,6 +783,19 @@ def main(args):
     model_mass.is_training = False  # Set model mode for evaluation
     model_mass.eval()
 
+    # BI-RADS Model : Aggregated Results --> Test F1-Score: 0.4022 | Test Bacc: 0.5039 | Test ROC-AUC: 0.7706
+    global model_birads
+    vars(args).update(vars(args_birads))
+    model_birads = build_model(args)
+    checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_2.pth')
+    if not os.path.exists(checkpoint_path):
+        os.makedirs('checkpoints/', exist_ok=True)
+        gdown.download('https://drive.google.com/uc?id=1Hzv10iEFmdcFsYZme4AE3y2qqrpWjgKa', checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    model_birads.load_state_dict(checkpoint['model'], strict=False)
+    model_birads.is_training = False  # Set model mode for evaluation
+    model_birads.eval()
+
     # Density Model : Aggregated Results --> Test F1-Score: 0.5350 | Test Bacc: 0.7598 | Test ROC-AUC: 0.9095
     global model_density
     vars(args).update(vars(args_density))
@@ -789,28 +803,11 @@ def main(args):
     checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth') #is does not work try best_model.pth
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
-        # gdown.download('https://drive.google.com/file/d/1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx/view?usp=sharing', checkpoint_path)
         gdown.download('https://drive.google.com/uc?id=1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx', checkpoint_path)
-        
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     model_density.load_state_dict(checkpoint['model'], strict=False)
     model_density.is_training = False  # Set model mode for evaluation
     model_density.eval()
-
-    # BI-RADS Model : Aggregated Results --> Test F1-Score: 0.4022 | Test Bacc: 0.5039 | Test ROC-AUC: 0.7706
-    global model_birads
-    vars(args).update(vars(args_birads))
-    model_birads = build_model(args)
-    checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_2.pth') 
-    if not os.path.exists(checkpoint_path):
-        os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/uc?id=1Hzv10iEFmdcFsYZme4AE3y2qqrpWjgKa', checkpoint_path)
-
-        
-    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-    model_birads.load_state_dict(checkpoint['model'], strict=False)
-    model_birads.is_training = False  # Set model mode for evaluation
-    model_birads.eval()
 
 
 
