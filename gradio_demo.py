@@ -796,6 +796,7 @@ def main(args):
     model_density.is_training = False  # Set model mode for evaluation
     model_density.eval()
 
+    # BI-RADS Model : Aggregated Results --> Test F1-Score: 0.4037 | Test Bacc: 0.4933 | Test ROC-AUC: 0.7642
     global model_birads
     vars(args).update(vars(args_birads))
     model_birads = build_model(args)
