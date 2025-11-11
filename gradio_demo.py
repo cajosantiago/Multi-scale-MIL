@@ -797,11 +797,11 @@ def main(args):
     model_density.is_training = False  # Set model mode for evaluation
     model_density.eval()
 
-    # BI-RADS Model : Aggregated Results --> Test F1-Score: 0.4037 | Test Bacc: 0.4933 | Test ROC-AUC: 0.7642
+    # BI-RADS Model : Aggregated Results --> Test F1-Score: 0.4022 | Test Bacc: 0.5039 | Test ROC-AUC: 0.7706
     global model_birads
     vars(args).update(vars(args_birads))
     model_birads = build_model(args)
-    checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_1.pth') 
+    checkpoint_path = os.path.join('checkpoints/', 'best_model_birads_2.pth') 
     if not os.path.exists(checkpoint_path):
         os.makedirs('checkpoints/', exist_ok=True)
         gdown.download('https://drive.google.com/uc?id=1Hzv10iEFmdcFsYZme4AE3y2qqrpWjgKa', checkpoint_path)
