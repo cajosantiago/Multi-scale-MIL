@@ -842,9 +842,10 @@ def load_dicom_image(file):
 def preprocess_image(image_or_dicom):
     # if image_or_dicom.endswith(".dcm"):
     try:
-        img = load_dicom_image(open(image_or_dicom, "rb"))
-    except ValueError:
-        print("Not a dicom image")
+        with open(image_or_dicom, "rb") as f:
+            img = load_dicom_image(f)
+    except Exception as e:
+        print(f"Error type: {type(e).__name__}, message: {e}")
         img = np.array(Image.open(image_or_dicom))
     ## Apply VinDr-Mammo preprocessing pipeline
     if len(img.shape) == 3 and img.shape[2] == 3: # RGB to Grayscale
