@@ -796,18 +796,18 @@ def main(args):
     model_birads.is_training = False  # Set model mode for evaluation
     model_birads.eval()
 
-    # Density Model : Aggregated Results --> Test F1-Score: 0.5350 | Test Bacc: 0.7598 | Test ROC-AUC: 0.9095
-    global model_density
-    vars(args).update(vars(args_density))
-    model_density = build_model(args)
-    checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth') #is does not work try best_model.pth
-    if not os.path.exists(checkpoint_path):
-        os.makedirs('checkpoints/', exist_ok=True)
-        gdown.download('https://drive.google.com/uc?id=1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx', checkpoint_path)
-    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-    model_density.load_state_dict(checkpoint['model'], strict=False)
-    model_density.is_training = False  # Set model mode for evaluation
-    model_density.eval()
+    # # Density Model : Aggregated Results --> Test F1-Score: 0.5350 | Test Bacc: 0.7598 | Test ROC-AUC: 0.9095
+    # global model_density
+    # vars(args).update(vars(args_density))
+    # model_density = build_model(args)
+    # checkpoint_path = os.path.join('checkpoints/', 'best_model_density.pth') #is does not work try best_model.pth
+    # if not os.path.exists(checkpoint_path):
+    #     os.makedirs('checkpoints/', exist_ok=True)
+    #     gdown.download('https://drive.google.com/uc?id=1EnUZnPLSeQTunj1ZP5nVLlSTWQoLOJzx', checkpoint_path)
+    # checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    # model_density.load_state_dict(checkpoint['model'], strict=False)
+    # model_density.is_training = False  # Set model mode for evaluation
+    # model_density.eval()
 
 
 
@@ -910,12 +910,10 @@ def run_classifier(image):
         output, _ = model_mass(x)
         model_mass.to('cpu')
         prob_mass = torch.sigmoid(output).cpu().detach().squeeze().numpy()
-
-        model_density.to(device)
-        output, _ = model_density(x)
-        model_density.to('cpu')
-        prob_density = torch.sigmoid(output).cpu().detach().squeeze().numpy()
-
+        # model_density.to(device)
+        # output, _ = model_density(x)
+        # model_density.to('cpu')
+        # prob_density = torch.sigmoid(output).cpu().detach().squeeze().numpy()
         model_birads.to(device)
         output, _ = model_birads(x)
         model_birads.to('cpu')
@@ -958,7 +956,8 @@ def run_classifier(image):
     return (torchvision.transforms.ToPILImage()(image),
             {"No": 1-prob_calc, "Yes": prob_calc},
             {"No": 1-prob_mass, "Yes": prob_mass},
-            { "Density A": prob_density[0], "Density B": prob_density[1], "Density C": prob_density[2], "Density D": prob_density[3]},
+            # { "Density A": prob_density[0], "Density B": prob_density[1], "Density C": prob_density[2], "Density D": prob_density[3]},
+            { "Density A": 0, "Density B": 0, "Density C": 0, "Density D": 0},
             {"BI-RADS 1": prob_birads[0], "BI-RADS 2": prob_birads[1], "BI-RADS 3": prob_birads[2], "BI-RADS 4": prob_birads[3]},
             image_with_boxes)
 
